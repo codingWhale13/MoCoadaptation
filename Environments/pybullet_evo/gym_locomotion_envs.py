@@ -222,7 +222,7 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
     if not np.isfinite(state).all():
       print("~INF~", state)
       done = 0
-    reward = max(state[-5]/10.0, 0.0)
+    reward = max(state[-5]/10.0, 0.0) 
 
     return state, reward, bool(done), {}
 
@@ -230,3 +230,37 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
       self.stateId = -1
       self.scene = None
       self.robot.reset_design(self._p, design)
+      
+#Needed for multiobjective class of halfcheetah
+class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
+  def __init__(self, render=False, design = None):
+    self.robot = HalfCheetah(design)
+    WalkerBaseBulletEnv.__init__(self, self.robot, render)
+    self.observation_space = spaces.Box(-np.inf, np.inf, shape=[17], dtype=np.float32)
+
+  def _isDone(self):
+    return False
+
+  def disconnect(self):
+      self._p.disconnect()
+
+  def step(self, a):
+    if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
+      self.robot.apply_action(a)
+      self.scene.global_step()
+
+    state = self.robot.calc_state()  # also calculates self.joints_at_limit
+
+    done = self._isDone()
+    if not np.isfinite(state).all():
+      print("~INF~", state)
+      done = 0
+    reward_run = max(state[-5]/10.0, 0.0)
+    reward_energy = 0.1#4 - 1 * np.square(a).sum()  #UNDERWORK
+
+    return state, {'obj': np.array([reward_run, reward_energy])}, bool(done), {}
+
+  def reset_design(self, design):
+      self.stateId = -1
+      self.scene = None
+      self.robot.reset_design(self._p, design)      

@@ -12,7 +12,7 @@ class PSO_simulation(Design_Optimization):
         self._env = env
 
         # TODO Make this independent of rl_algo config
-        self._episode_length = self._config['rl_algorithm_config']['algo_params']['num_steps_per_epoch']
+        self._episode_length = self._config['steps_per_episodes']#self._config['rl_algorithm_config']['algo_params']['steps_per_episodes'] #['num_steps_per_epoch'] #ERROR?
         self._reward_scale = self._config['rl_algorithm_config']['algo_params']['reward_scale']
 
 

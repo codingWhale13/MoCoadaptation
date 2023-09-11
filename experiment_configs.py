@@ -21,7 +21,7 @@ sac_pso_batch = {
     'rl_algorithm_config' : dict(               # Dictonary which contains the parameters for the RL algorithm
         algo_params=dict(                           # Parameters for the RL learner for the individual networks
             # num_epochs=int(1),
-            # num_steps_per_epoch=1000,
+            #num_steps_per_epoch=1000,
             # num_steps_per_eval=1,
             # num_updates_per_env_step=10,
             # num_updates_per_epoch=1000,
@@ -37,7 +37,7 @@ sac_pso_batch = {
             ),
         algo_params_pop=dict(                       # Parameters for the RL learner for the individual networks
             # num_epochs=int(1),
-            # num_steps_per_epoch=1,
+            #num_steps_per_epoch=1,
             # num_steps_per_eval=1,
             # num_updates_per_env_step=10,
             # num_updates_per_epoch=250,
@@ -80,16 +80,17 @@ sac_pso_sim = {
     'cuda_device': 0,
     'exploration_strategy': 'random',
     'design_optim_method' : 'pso_sim',
+    'steps_per_episodes' : 1000,                # Number of steps per episode ##MODDED##
     'save_networks' : True,
     'rl_method' : 'SoftActorCritic',
     'rl_algorithm_config' : dict(
         algo_params=dict(
             # num_epochs=int(1),
-            # num_steps_per_epoch=1000,
-            # num_steps_per_eval=1,
-            # num_updates_per_env_step=10,
-            # num_updates_per_epoch=1000,
-            # batch_size=256,
+            #num_steps_per_epoch=1000,
+            #num_steps_per_eval=1,
+            #num_updates_per_env_step=10,
+            #num_updates_per_epoch=1000,
+            #batch_size=256,
             discount=0.99,
             reward_scale=1.0,
 
@@ -101,11 +102,11 @@ sac_pso_sim = {
             ),
         algo_params_pop=dict(
             # num_epochs=int(1),
-            # num_steps_per_epoch=1,
-            # num_steps_per_eval=1,
-            # num_updates_per_env_step=10,
-            # num_updates_per_epoch=250,
-            # batch_size=256,
+            #num_steps_per_epoch=1,
+            #num_steps_per_eval=1,
+            #num_updates_per_env_step=10,
+            #num_updates_per_epoch=250,
+            #batch_size=256,
             discount=0.99,
             reward_scale=1.0,
 
