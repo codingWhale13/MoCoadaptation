@@ -8,7 +8,7 @@ def main(config):
 
     # Create foldr in which to save results
     folder = config['data_folder']
-    #generate random hash string - unique identifier if we start
+    #generate random hash string - unique identifier if we startexi
     # multiple experiments at the same time
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id
