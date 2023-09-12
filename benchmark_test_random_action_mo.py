@@ -13,12 +13,12 @@ from Environments import evoenvsMO as envsmo
 #env.reset()
 
 #env = gym.Wrapper(gym.make("CartPole-v0")) 
-env = gym.Wrapper(envsmo.HalfCheetahEnv()) #gym.Wrapper(gym.make("HalfCheetah"))
+env = gym.Wrapper(envsmo.HalfCheetahEnvMO()) #gym.Wrapper(gym.make("HalfCheetah"))
 
-for i_episode in range(2):
+for i_episode in range(100):
     observation = env.reset()
     #while (True):
-    for _ in range(1, 10000):
+    for _ in range(1, 1000):
         #env.render()
         action = env.action_space.sample()
         #action = np.random.randint(env.action_space.n, size=num)
