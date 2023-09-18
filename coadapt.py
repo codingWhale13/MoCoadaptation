@@ -1,7 +1,7 @@
 from RL.soft_actor import SoftActorCritic
 from DO.pso_batch import PSO_batch
 from DO.pso_sim import PSO_simulation
-from Environments import evoenvs as evoenvs
+from Environments import evoenvsMO as evoenvs # Switched from evoenvs to evoenvsMO
 import utils
 import time
 from RL.evoreplay import EvoReplayLocalGlobalStart
@@ -45,7 +45,7 @@ def select_environment(env_name):
 
     """
     if env_name == 'HalfCheetah':
-        return evoenvs.HalfCheetahEnv
+        return evoenvs.HalfCheetahEnvMO # SORL #return evoenvs.HalfCheetahEnv # Needs to be changed to HalfCheetahMo -> Morl
     else:
         raise ValueError("Environment class not found.")
 
@@ -86,9 +86,9 @@ class Coadaptation(object):
         self._reward_scale = 1.0 #self._config['rl_algorithm_config']['algo_params']['reward_scale']
 
         self._env_class = select_environment(self._config['env']['env_name'])
-        self._env = evoenvs.HalfCheetahEnv(config=self._config)
+        self._env = evoenvs.HalfCheetahEnvMO(config=self._config)#evoenvs.HalfCheetahEnv(config=self._config) # Need to be changed to MORL HalfCheetahMoEnv
 
-        self._replay = EvoReplayLocalGlobalStart(self._env,
+        self._replay = EvoReplayLocalGlobalStart(self._env, # Should work as it is since rewards as passed as a dict 'obj' or numpy array
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7))
 
@@ -185,7 +185,7 @@ class Coadaptation(object):
             # TODO this has to be fixed _variant_spec
             reward = reward * self._reward_scale
             terminal = np.array([done])
-            reward = np.array([reward])
+            reward = reward # reward = np.array([reward]) # No need to be converted to numpy array since rewards are now in np.array([0], [1])  
             self._replay.add_sample(observation=state, action=action, reward=reward, next_observation=new_state,
                            terminal=terminal)
             state = new_state
@@ -202,8 +202,8 @@ class Coadaptation(object):
         """
         state = self._env.reset()
         done = False
-        reward_ep = 0.0
-        reward_original = 0.0
+        reward_ep = np.array([0, 0]) #SORL #reward_ep = 0.0 # We have two goals right now -> changes
+        reward_original = np.array([0, 0])# SORL #reward_original = 0.0  # -> same
         action_cost = 0.0
         nmbr_of_steps = 0
 
@@ -224,8 +224,8 @@ class Coadaptation(object):
             action, _ = self._policy_cpu.get_action(state, deterministic=True)
             new_state, reward, done, info = self._env.step(action)
             action_cost += info['orig_action_cost']
-            reward_ep += float(reward)
-            reward_original += float(info['orig_reward'])
+            reward_ep += reward#SORL#reward_ep += float(reward) # changes need to be made here to convert scalar rewards to tuple or np.array
+            reward_original += info['orig_reward'] #SORL#reward_original += float(info['orig_reward']) 
             state = new_state
         utils.move_to_cuda(self._config)
         # Do something here to log the results

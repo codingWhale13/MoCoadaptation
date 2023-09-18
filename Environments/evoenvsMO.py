@@ -39,7 +39,7 @@ class HalfCheetahEnvMO(object):
         state, reward, done, _ = self._env.step(a)
         state = np.append(state, self._config_numpy)
         info['orig_action_cost'] = 0.1 * np.mean(np.square(a))
-        info['orig_reward'] = reward
+        info['orig_reward'] = reward # Reward vector scaling?
 
         if self._record_video:
             self._video_recorder.step(env=self._env, state=state, reward=reward, done=done)

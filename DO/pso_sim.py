@@ -31,9 +31,9 @@ class PSO_simulation(Design_Optimization):
                 action, _ = policy_network.get_action(state, deterministic=True)
                 new_state, reward, done, info = self._env.step(action)
                 reward = reward * self._reward_scale
-                reward_episode.append(float(reward))
+                reward_episode.append(reward) # SORL #reward_episode.append(float(reward)) #Changed for MORL ->
                 state = new_state
-            reward_mean = np.mean(reward_episode)
+            reward_mean = np.mean(reward_episode) # Need to be changed? Assumedly
             return reward_mean
 
         def f_qval(x_input, **kwargs):
@@ -41,7 +41,7 @@ class PSO_simulation(Design_Optimization):
             cost = np.zeros((shape[0],))
             for i in range(shape[0]):
                 x = x_input[i,:]
-                reward = get_reward_for_design(x)
+                reward = get_reward_for_design(x) # Same here -> changes for the MORL?
                 cost[i] = -reward
             return cost
 

@@ -256,9 +256,9 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
       print("~INF~", state)
       done = 0
     reward_run = max(state[-5]/10.0, 0.0)
-    reward_energy = 0.1#4 - 1 * np.square(a).sum()  #UNDERWORK
+    reward_energy = 4 - 1 * np.square(a).sum()  #UNDERWORK
 
-    return state, {'obj': np.array([reward_run, reward_energy])}, bool(done), {}
+    return state, np.array([reward_run, reward_energy]), bool(done), {} # to numpy array instead of dict #return state, {'obj': np.array([reward_run, reward_energy])}, bool(done), {}
 
   def reset_design(self, design):
       self.stateId = -1
