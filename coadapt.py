@@ -224,8 +224,9 @@ class Coadaptation(object):
             action, _ = self._policy_cpu.get_action(state, deterministic=True)
             new_state, reward, done, info = self._env.step(action)
             action_cost += info['orig_action_cost']
-            reward_ep += reward#SORL#reward_ep += float(reward) # changes need to be made here to convert scalar rewards to tuple or np.array
-            reward_original += info['orig_reward'] #SORL#reward_original += float(info['orig_reward']) 
+            reward_ep = np.add(reward_ep, reward, casting='unsafe') #NOT WORKING  #SORL#reward_ep += float(reward) # changes need to be made here to convert scalar rewards to tuple or np.array
+            #reward_original += info['orig_reward'] #SORL#reward_original += float(info['orig_reward']) 
+            reward_original = np.add(reward_original,info['orig_reward'], casting='unsafe') # needed for UFucOutputCastingError
             state = new_state
         utils.move_to_cuda(self._config)
         # Do something here to log the results
