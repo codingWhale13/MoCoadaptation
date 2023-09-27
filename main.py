@@ -22,7 +22,7 @@ def main(config):
     with open(os.path.join(file_str, 'config.json'), 'w') as fd:
             fd.write(json.dumps(config,indent=2))
 
-    co = coadapt.Coadaptation(config)
+    co = coadapt.Coadaptation(config, 4)
     co.run()
 
 
@@ -33,5 +33,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         config = cfg.config_dict[sys.argv[1]]
     else:
-        config = cfg.config_dict['base']
+        config = cfg.config_dict['sac_pso_sim'] #['sac_pso_batch'] # for debugging the code
+        #config = cfg.config_dict['base']
     main(config)

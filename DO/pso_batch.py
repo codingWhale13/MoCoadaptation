@@ -17,7 +17,7 @@ class PSO_batch(Design_Optimization):
             self._state_batch_size = 32
 
 
-    def optimize_design(self, design, q_network, policy_network):
+    def optimize_design(self, design, q_network, policy_network, weights): #weights needed for MORL
         self._replay.set_mode('start')
         initial_state = self._replay.random_batch(self._state_batch_size)
         initial_state = initial_state['observations']
@@ -47,10 +47,16 @@ class PSO_batch(Design_Optimization):
                     network_input = torch.from_numpy(state_batch).to(device=ptu.device, dtype=torch.float32)
                     action, _, _, _, _, _, _, _, = policy_network(network_input, deterministic=True)
                     output = q_network(network_input, action)
-                    #output = self._vf_pop.forward(input)
-                    loss = -output.mean().sum()
+                    #output = self._vf_pop.forward(input)  
+                    #SORL - original
+                    #loss = -output.mean().sum()
+                    #fval = float(loss.item())
+                    #cost[i] = fval
+                    #MORL ? I assumed this is a torch tensor since that makes sense
+                    loss = -torch.matmul(output, weights).mean().sum()
                     fval = float(loss.item())
                     cost[i] = fval
+                    
             return cost
 
         lower_bounds = [l for l, _ in self._env.design_params_bounds]

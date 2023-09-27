@@ -11,7 +11,7 @@ import utils
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
 
-    def __init__(self, config, env, replay, networks):
+    def __init__(self, config, env, replay, networks, weight_pref):
         """ Bascally a wrapper class for SAC from rlkit.
 
         Args:
@@ -43,6 +43,8 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_indiv_updates = config['rl_algorithm_config']['indiv_updates']
         self._nmbr_pop_updates = config['rl_algorithm_config']['pop_updates']
 
+        self._weight_pref = weight_pref # Needed for MORL
+        
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
             policy=self._ind_policy,
@@ -51,7 +53,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._ind_qf1_target,
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning = False,
-            **self._variant_spec
+            weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
+            **self._variant_spec,
+            
         )
 
         self._algorithm_pop = SoftActorCritic_rlkit(
@@ -62,7 +66,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._pop_qf1_target,
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning = False,
-            **self._variant_pop
+            weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
+            **self._variant_pop,
+            
         )
 
         # self._algorithm_ind.to(ptu.device)
@@ -83,6 +89,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning = False,
             # alt_alpha = self._alt_alpha,
+            weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
             **self._variant_spec
         )
         if self._config['rl_algorithm_config']['copy_from_gobal']:

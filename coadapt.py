@@ -71,19 +71,23 @@ class Coadaptation(object):
 
     """
 
-    def __init__(self, config):
+    def __init__(self, config, choice : int):
         """
         Args:
             config: A config dictonary.
-
+            #UPDATE choice is from 0 to 9 choice of weights
         """
 
+        
         self._config = config
         utils.move_to_cuda(self._config)
 
         # TODO This should not depend on rl_algorithm_config in the future
         self._episode_length = self._config['steps_per_episodes']
         self._reward_scale = 1.0 #self._config['rl_algorithm_config']['algo_params']['reward_scale']
+
+        self._weights_pref = self._config['weights'][choice]#NEEDED FOR MORL
+        self._weights_pref = torch.tensor(self._weights_pref).reshape(2, 1).to("cuda")
 
         self._env_class = select_environment(self._config['env']['env_name'])
         self._env = evoenvs.HalfCheetahEnvMO(config=self._config)#evoenvs.HalfCheetahEnv(config=self._config) # Need to be changed to MORL HalfCheetahMoEnv
@@ -96,7 +100,7 @@ class Coadaptation(object):
 
         self._networks = self._rl_alg_class.create_networks(env=self._env, config=config)
 
-        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks)
+        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref) # Need to pass weights to the SAC in RLkit
 
         self._do_alg_class = select_design_opt_alg(self._config['design_optim_method'])
         self._do_alg = self._do_alg_class(config=self._config, replay=self._replay, env=self._env)
@@ -334,7 +338,7 @@ class Coadaptation(object):
         optimized_params = self._env.get_random_design()
         q_network = self._rl_alg_class.get_q_network(self._networks['population'])
         policy_network = self._rl_alg_class.get_policy_network(self._networks['population'])
-        optimized_params = self._do_alg.optimize_design(design=optimized_params, q_network=q_network, policy_network=policy_network)
+        optimized_params = self._do_alg.optimize_design(design=optimized_params, q_network=q_network, policy_network=policy_network, weights=self._weights_pref) # Need weights for MORL optimizer
         optimized_params = list(optimized_params)
 
         for i in range(design_cycles):
@@ -350,7 +354,7 @@ class Coadaptation(object):
                 self._data_design_type = 'Optimized'
                 q_network = self._rl_alg_class.get_q_network(self._networks['population'])
                 policy_network = self._rl_alg_class.get_policy_network(self._networks['population'])
-                optimized_params = self._do_alg.optimize_design(design=optimized_params, q_network=q_network, policy_network=policy_network)
+                optimized_params = self._do_alg.optimize_design(design=optimized_params, q_network=q_network, policy_network=policy_network, weights=self._weights_pref) # Need weights for MORL optimizer
                 optimized_params = list(optimized_params)
             else:
                 self._data_design_type = 'Random'

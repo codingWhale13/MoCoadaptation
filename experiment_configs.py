@@ -18,6 +18,18 @@ sac_pso_batch = {
     'steps_per_episodes' : 1000,                # Number of steps per episode
     'save_networks' : True,                     # If True networks are checkpointed and saved for each design
     'rl_method' : 'SoftActorCritic',            # Which reinforcement learning method to use.
+    'weights': [[0., 1.], 
+                [0.1, 0.9], 
+                [0.2, 0.8], 
+                [0.3, 0.7],
+                [0.4, 0.6],
+                [0.5, 0.5],
+                [0.6, 0.4],
+                [0.7, 0.3],
+                [0.8, 0.2],
+                [0.9, 0.1],
+                [1., 0.]
+                ],  #Needed for MORL weigh preferences
     'rl_algorithm_config' : dict(               # Dictonary which contains the parameters for the RL algorithm
         algo_params=dict(                           # Parameters for the RL learner for the individual networks
             # num_epochs=int(1),
@@ -69,20 +81,32 @@ sac_pso_sim = {
     'name' : 'Experiment 2: PSO using Simulations',
     'data_folder' : 'data_exp_sac_pso_sim',
     'nmbr_random_designs' : 0,
-    'iterations_init' : 300,
-    'iterations_random': 100,
-    'iterations' : 100,
-    'design_cycles' : 55,
-    'state_batch_size' : 32,
+    'iterations_init' : 10, # 300
+    'iterations_random': 10, # 100
+    'iterations' : 10, # 100
+    'design_cycles' : 10, # 55
+    'state_batch_size' : 32, #
     'initial_episodes' : 3,
     'use_gpu' : True,
     'use_cpu_for_rollout': False,
     'cuda_device': 0,
     'exploration_strategy': 'random',
     'design_optim_method' : 'pso_sim',
-    'steps_per_episodes' : 1000,                # Number of steps per episode ##MODDED##
+    'steps_per_episodes' : 10,                # Number of steps per episode ##MODDED##
     'save_networks' : True,
     'rl_method' : 'SoftActorCritic',
+    'weights': [[0., 1.], 
+                [0.1, 0.9], 
+                [0.2, 0.8], 
+                [0.3, 0.7],
+                [0.4, 0.6],
+                [0.5, 0.5],
+                [0.6, 0.4],
+                [0.7, 0.3],
+                [0.8, 0.2],
+                [0.9, 0.1],
+                [1., 0.]
+                ],  #Needed for MORL weigh preferences
     'rl_algorithm_config' : dict(
         algo_params=dict(
             # num_epochs=int(1),

@@ -16,14 +16,16 @@ class PSO_simulation(Design_Optimization):
         self._reward_scale = self._config['rl_algorithm_config']['algo_params']['reward_scale']
 
 
-    def optimize_design(self, design, q_network, policy_network):
+    def optimize_design(self, design, q_network, policy_network, weights): #weights needed for MORL
         # Important: We reset the design of the environment. Previous design
         #   will be lost
-
+        
         def get_reward_for_design(design):
             self._env.set_new_design(design)
             state = self._env.reset()
-            reward_episode = []
+            reward_episode = [] # SORL # MORL
+            #reward_episode = np.empty([])
+            weights_np = weights.cpu().numpy() #Convert from tensor to numpy array #MORL
             done = False
             nmbr_of_steps = 0
             while not(done) and nmbr_of_steps <= self._episode_length:
@@ -31,9 +33,20 @@ class PSO_simulation(Design_Optimization):
                 action, _ = policy_network.get_action(state, deterministic=True)
                 new_state, reward, done, info = self._env.step(action)
                 reward = reward * self._reward_scale
-                reward_episode.append(reward) # SORL #reward_episode.append(float(reward)) #Changed for MORL ->
+                reward = reward.reshape(1,2)
+                #reward_episode.append(float(reward)) # SORL original
+                reward = np.matmul(reward, weights_np)#.reshape(1,) # Scalarization of reward per iteration
+                reward_episode.append(reward)  #Changed for MORL - list
+                #np.column_stack((reward_episode, reward))# MORL - as numpy array
                 state = new_state
-            reward_mean = np.mean(reward_episode) # Need to be changed? Assumedly
+                
+            #print(reward_episode.shape)
+            #print(reward_episode)    
+            
+            #reward_mean = np.matmul(reward_episode, weights.numpy) # scalarisation # I assume that the reward_episode is NDarray since .step(action) from evoenvsMO.py is returning NDarray as reward
+            reward_mean = np.mean(reward_episode) # SORL
+            #print(reward_mean)
+            #reward_mean = np.mean(reward_mean) # SORL Need to be changed still?
             return reward_mean
 
         def f_qval(x_input, **kwargs):
