@@ -4,25 +4,32 @@ import coadapt
 import experiment_configs as cfg
 import json
 
-def main(config):
+#def main(config): # ORIG'
+def main(config_name, weight_index): # MORL
 
     # Create foldr in which to save results
-    folder = config['data_folder']
+    #folder = config['data_folder'] #ORIG
+    folder = config_name['data_folder'] #MORL
     #generate random hash string - unique identifier if we startexi
     # multiple experiments at the same time
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id
-    config['data_folder_experiment'] = file_str
+    #config['data_folder_experiment'] = file_str # ORIG
+    config_name['data_folder_experiment'] = file_str # MORL
 
     # Create experiment folder
     if not os.path.exists(file_str):
       os.makedirs(file_str)
 
     # Store config
+    #with open(os.path.join(file_str, 'config.json'), 'w') as fd:
+    #        fd.write(json.dumps(config,indent=2))                  #ORIG
+    
     with open(os.path.join(file_str, 'config.json'), 'w') as fd:
-            fd.write(json.dumps(config,indent=2))
-
-    co = coadapt.Coadaptation(config, 4)
+            fd.write(json.dumps(config_name,indent=2))                  #MORL
+    
+    #co = coadapt.Coadaptation(config) # ORIG 
+    co = coadapt.Coadaptation(config_name, weight_index) # MORL
     co.run()
 
 
@@ -30,9 +37,22 @@ def main(config):
 if __name__ == "__main__":
     # We assume we call the program only with the name of the config we want to run
     # nothing too complex
-    if len(sys.argv) > 1:
-        config = cfg.config_dict[sys.argv[1]]
+    #if len(sys.argv) > 1:
+    #    config = cfg.config_dict[sys.argv[1]]
+    #else:
+    #    config = cfg.config_dict['sac_pso_sim'] #['sac_pso_batch'] # for debugging the code
+    #    #config = cfg.config_dict['base']
+    #main(config)
+    
+    # MORL
+    if len(sys.argv) > 2:
+        config_name = cfg.config_dict[sys.argv[1]]
+        weight_index = int(sys.argv[2])
+        print(f"index w : {weight_index}")
+        print(config_name['weights'][weight_index])
     else:
-        config = cfg.config_dict['sac_pso_sim'] #['sac_pso_batch'] # for debugging the code
-        #config = cfg.config_dict['base']
-    main(config)
+        config_name = cfg.config_dict['sac_pso_sim']
+        weight_index = 4
+        print(config_name['weights'][weight_index])
+    #main(config) ORIG
+    main(config_name, weight_index) # MORL
