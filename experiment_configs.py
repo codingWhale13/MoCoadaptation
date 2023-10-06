@@ -92,7 +92,7 @@ sac_pso_sim = {
     'cuda_device': 0,
     'exploration_strategy': 'random',
     'design_optim_method' : 'pso_sim',
-    'steps_per_episodes' : 10,              # 1000  # Number of steps per episode ##MODDED##
+    'steps_per_episodes' : 1000,              # 1000  # Number of steps per episode ##MODDED##
     'save_networks' : True,
     'rl_method' : 'SoftActorCritic',
     'weights': [[0., 1.], 
