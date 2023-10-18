@@ -128,7 +128,7 @@ class BestEpisodesVideoRecorder(object):
                     move(os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-2)))
                 except:
                     pass
-            if self._current_episode_reward < elem:
+            if (self._current_episode_reward < elem).any(): #changed for MORL since rewards are not scalarr
                 self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:]
                 copyfile(os.path.join(self._current_vid_path, 'current_video.avi'), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)))
                 break
@@ -149,7 +149,9 @@ class BestEpisodesVideoRecorder(object):
             self._vid_writer.release()
             if not os.path.exists(self._current_vid_path):
                 os.makedirs(self._current_vid_path)
-            if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward:
+            print(self._episodic_rewards) # DEBUGGING
+            print(self._current_episode_reward) # DEBUGGING
+            if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward.any(): # changed for MORL since self._current_episode_reward isnt a scalar
                 self._do_video_file_rotation()
             print('Average FPS of last episode: {}'.format(self._fps_per_frame/self._step_counter))
 

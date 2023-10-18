@@ -3,6 +3,7 @@ import numpy as np
 from .pybullet_evo.gym_locomotion_envs import HalfCheetahMoBulletEnv
 import copy
 from utils import BestEpisodesVideoRecorder
+#import wandb
 
 class HalfCheetahEnvMO(object):
     def __init__(self, config = {'env' : {'render' : True, 'record_video': False}}):
@@ -40,6 +41,9 @@ class HalfCheetahEnvMO(object):
         state = np.append(state, self._config_numpy)
         info['orig_action_cost'] = 0.1 * np.mean(np.square(a))
         info['orig_reward'] = reward # Reward vector scaling?
+
+        #self.wandb
+        #wandb.log({"Reward run" :reward[0], "Reward energy": reward[1]})
 
         if self._record_video:
             self._video_recorder.step(env=self._env, state=state, reward=reward, done=done)

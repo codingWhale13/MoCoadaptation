@@ -3,6 +3,7 @@ import hashlib
 import coadapt
 import experiment_configs as cfg
 import json
+import wandb
 
 #def main(config): # ORIG'
 def main(config_name, weight_index): # MORL
@@ -29,8 +30,9 @@ def main(config_name, weight_index): # MORL
             fd.write(json.dumps(config_name,indent=2))                  #MORL
     
     #co = coadapt.Coadaptation(config) # ORIG 
-    co = coadapt.Coadaptation(config_name, weight_index) # MORL
+    co = coadapt.Coadaptation(config_name, weight_index, project_name, run_name) # MORL
     co.run()
+    wandb.finish()
 
 
 
@@ -45,14 +47,21 @@ if __name__ == "__main__":
     #main(config)
     
     # MORL
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 4:
         config_name = cfg.config_dict[sys.argv[1]]
         weight_index = int(sys.argv[2])
+        project_name = sys.argv[3]
+        run_name = sys.argv[4]
+        print(run_name)
+        print(project_name)
+        #Later on needs to changed to give you a option to give trackable names for wandb tracking
         print(f"index w : {weight_index}")
         print(config_name['weights'][weight_index])
     else:
         config_name = cfg.config_dict['sac_pso_sim']
-        weight_index = 4
+        weight_index = 8
+        project_name="coadapt"
+        run_name="default-run-weight" + f"-{config_name['weights'][weight_index]}"
         print(config_name['weights'][weight_index])
     #main(config) ORIG
     main(config_name, weight_index) # MORL

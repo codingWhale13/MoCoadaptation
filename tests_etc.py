@@ -63,5 +63,10 @@ print(reward_mean)
 
 print(np.column_stack((r1, [2, 3])))
 
+run_name="default-run"
+k = 1
+run_name = run_name + f"-{k} "
+
+print(f"This is run name result -> :{run_name}")
 
 #THIS IS A TEST COMMIT

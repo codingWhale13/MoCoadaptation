@@ -150,7 +150,7 @@ sac_pso_sim = {
     'env' : dict(
         env_name='HalfCheetah',
         render=True,
-        record_video=False,
+        record_video=False, #False
     ),
     }
 

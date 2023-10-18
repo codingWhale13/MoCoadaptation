@@ -9,6 +9,7 @@ import numpy as np
 import os
 import csv
 import torch
+import wandb # import to log results
 
 def select_design_opt_alg(alg_name):
     """ Selects the design optimization method.
@@ -71,13 +72,15 @@ class Coadaptation(object):
 
     """
 
-    def __init__(self, config, choice : int):
+    def __init__(self, config, choice : int, project_name="coadapt", run_name="default"):
         """
         Args:
             config: A config dictonary.
-            #UPDATE choice is from 0 to 9 choice of weights
+            #UPDATE choice is from 0 to 10 choice of weights
         """
-
+        wandb.login(key="") # this should be key={insert key here without brackets}
+        
+        wandb.init(project=project_name, name=run_name)
         
         self._config = config
         utils.move_to_cuda(self._config)
@@ -100,7 +103,7 @@ class Coadaptation(object):
 
         self._networks = self._rl_alg_class.create_networks(env=self._env, config=config)
 
-        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref) # Need to pass weights to the SAC in RLkit
+        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref, wandb_instance=wandb.run) # Need to pass weights to the SAC in RLkit
 
         self._do_alg_class = select_design_opt_alg(self._config['design_optim_method'])
         self._do_alg = self._do_alg_class(config=self._config, replay=self._replay, env=self._env)
@@ -130,7 +133,9 @@ class Coadaptation(object):
         self._rl_alg.episode_init()
         self._replay.reset_species_buffer()
 
-        self._data_rewards = []
+        #self._data_rewards = [] # SORL ORIGINAL # for MORL we need two
+        self._data_reward_1 = []
+        self._data_reward_2 = []
         self._episode_counter = 0
 
 
@@ -230,11 +235,18 @@ class Coadaptation(object):
             action_cost += info['orig_action_cost']
             reward_ep = np.add(reward_ep, reward, casting='unsafe') #NOT WORKING  #SORL#reward_ep += float(reward) # changes need to be made here to convert scalar rewards to tuple or np.array
             #reward_original += info['orig_reward'] #SORL#reward_original += float(info['orig_reward']) 
-            reward_original = np.add(reward_original,info['orig_reward'], casting='unsafe') # needed for UFucOutputCastingError # updated for update3
+            #reward_original = np.add(reward_original,info['orig_reward'], casting='unsafe') # needed for UFucOutputCastingError # updated for update3 #update 6, unneeded?
             state = new_state
         utils.move_to_cuda(self._config)
         # Do something here to log the results
-        self._data_rewards.append(reward_ep)
+        #self._data_rewards.append(reward_ep) # SORL # I think needs to be changed. The rewards should be two categories
+        self._data_reward_1.append(reward_ep[0])
+        self._data_reward_2.append(reward_ep[1])
+        #saved to wandb the episodic reward
+        #reward_arr = np.array(self._data_design_type, dtype=float)
+        wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]})
+        
+        
 
     def save_networks(self):
         """ Saves the networks on the disk.
@@ -295,8 +307,13 @@ class Coadaptation(object):
             cwriter = csv.writer(fd)
             cwriter.writerow(['Design Type:', self._data_design_type])
             cwriter.writerow(current_design)
-            cwriter.writerow(self._data_rewards)
-
+            #cwriter.writerow(self._data_rewards) # SORL - needs to be changed for MORL, we have two rewards instead of one
+            cwriter.writerow(self._data_reward_1)
+            cwriter.writerow(self._data_reward_2)
+            
+        #Save rewards and current design - Not in use
+        #wandb.log({"Rewards" :self._data_rewards, "Current design": current_design})
+        
     def run(self):
         """ Runs the Fast Evolution through Actor-Critic RL algorithm.
 
