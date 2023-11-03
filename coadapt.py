@@ -79,7 +79,7 @@ class Coadaptation(object):
             config: A config dictonary.
             #UPDATE choice is from 0 to 10 choice of weights
         """
-        wandb.login(key="1658c49c81f0b6594adc4f61b80360f202a1eea1") # this should be key={insert key here without brackets}
+        wandb.login(key="") # this should be key={insert key here without brackets}
         
         wandb.init(project=project_name, name=run_name)
         
