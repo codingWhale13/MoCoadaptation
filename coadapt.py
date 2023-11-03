@@ -11,6 +11,7 @@ import csv
 import torch
 import wandb # import to log results
 
+
 def select_design_opt_alg(alg_name):
     """ Selects the design optimization method.
 
@@ -78,7 +79,7 @@ class Coadaptation(object):
             config: A config dictonary.
             #UPDATE choice is from 0 to 10 choice of weights
         """
-        wandb.login(key="") # this should be key={insert key here without brackets}
+        wandb.login(key="1658c49c81f0b6594adc4f61b80360f202a1eea1") # this should be key={insert key here without brackets}
         
         wandb.init(project=project_name, name=run_name)
         
@@ -274,7 +275,8 @@ class Coadaptation(object):
     def load_networks(self, path):
         """ Loads netwokrs from the disk.
         """
-        model_data = torch.load(path) #, map_location=ptu.device)
+        model_data = torch.load(path) #, map_location=ptu.device) # needs to be fixed
+        #model_data = torch.load(path, map_location=ptu.device)
 
         model_data_pop = model_data['population']
         for key, net in self._networks['population'].items():

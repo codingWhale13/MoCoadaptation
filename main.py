@@ -59,8 +59,8 @@ if __name__ == "__main__":
         print(config_name['weights'][weight_index])
     else:
         config_name = cfg.config_dict['sac_pso_sim']
-        weight_index = 8
-        project_name="coadapt"
+        weight_index = 10
+        project_name="coadapt-save-testing"
         run_name="default-run-weight" + f"-{config_name['weights'][weight_index]}"
         print(config_name['weights'][weight_index])
     #main(config) ORIG

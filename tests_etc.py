@@ -1,4 +1,6 @@
 import numpy as np
+import pickle
+
 
 dic1 = {'obj': np.array([2, 3])}
 
@@ -70,3 +72,18 @@ run_name = run_name + f"-{k} "
 print(f"This is run name result -> :{run_name}")
 
 #THIS IS A TEST COMMIT
+
+key1 = ("string", 10, 15.5)
+key2 = np.zeros((3,2))
+
+sum = { 'test1': key1,
+        'rest1' : key2,
+       }
+
+with open('data.pkl', 'wb') as file:
+    pickle.dump(sum, file)
+    
+with open('data.pkl', 'rb') as file:
+    load = pickle.load(file)
+
+print(load)
