@@ -9,11 +9,11 @@ import wandb
 
 #path='/home/oskar/Thesis/checkpoint_design_60' #data.pkl
 #path='/home/oskar/Thesis/Results_scalarized/results_with_wandb/Wed_Oct_18_18:29:14_2023__49c4bc4c/checkpoints/checkpoint_design_60.chk' # works
-path='/home/oskar/Thesis/Results_scalarized/results_with_wandb/Wed_Oct_18_18:29:24_2023__a18577fe/checkpoints/checkpoint_design_60.chk' 
+path='/home/oskar/Thesis/Results_scalarized/results_with_wandb/Fri_Oct_20_17:52:03_2023__fb9514fe_.5_.5/checkpoints/checkpoint_design_60.chk' 
 experiment_config = experiment_configs.sac_pso_sim #MORL
 weight_index = 8 #Set as what the data was for # in this case 8
-project_name = "coadapt-testing"
-run_name = "1"
+project_name = "coadapt-testing-video"
+run_name = "0.5, 0.5"
 
 if __name__ == "__main__":
 

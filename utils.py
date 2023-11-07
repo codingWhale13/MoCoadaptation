@@ -96,7 +96,8 @@ class BestEpisodesVideoRecorder(object):
 
     def reset_recorder(self):
         self._episode_counter = 0
-        self._episodic_rewards = [-float('inf')] * self._keep_n_best
+        #self._episodic_rewards = [-float('inf')] * self._keep_n_best # ORIG
+        self._episodic_rewards = np.full(self._keep_n_best, -np.inf) # need for numpy array since rewards has two parts and it is numpy array
         self._episodic_reset()
 
 
@@ -129,7 +130,9 @@ class BestEpisodesVideoRecorder(object):
                 except:
                     pass
             if (self._current_episode_reward < elem).any(): #changed for MORL since rewards are not scalarr
-                self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:]
+                #self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:] # ORIG
+                self._episodic_rewards = np.concatenate([self._episodic_rewards[1:idx], self._current_episode_reward.ravel(), self._episodic_rewards[idx:]]) # Fix for dimensions
+
                 copyfile(os.path.join(self._current_vid_path, 'current_video.avi'), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)))
                 break
             # Will only be true in last iteration and only be hit if last element is to be moved
@@ -138,7 +141,10 @@ class BestEpisodesVideoRecorder(object):
                     move(os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx)), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)))
                 except:
                     pass
-                self._episodic_rewards = self._episodic_rewards[1:] + [self._current_episode_reward]
+                #self._episodic_rewards = self._episodic_rewards[1:] + [self._current_episode_reward] #ORIG
+                self._episodic_rewards = np.concatenate([self._episodic_rewards[1:], self._current_episode_reward.ravel()]) # Fix for dimensions
+
+
                 copyfile(os.path.join(self._current_vid_path, 'current_video.avi'), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx)))
 
 
@@ -151,7 +157,8 @@ class BestEpisodesVideoRecorder(object):
                 os.makedirs(self._current_vid_path)
             print(self._episodic_rewards) # DEBUGGING
             print(self._current_episode_reward) # DEBUGGING
-            if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward.any(): # changed for MORL since self._current_episode_reward isnt a scalar
+            #if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward: # ORIG
+            if self._did_at_least_one_step and np.min(self._episodic_rewards) < np.min(self._current_episode_reward): #('comparison')).any(): # changed for MORL comparison for two rewards
                 self._do_video_file_rotation()
             print('Average FPS of last episode: {}'.format(self._fps_per_frame/self._step_counter))
 
