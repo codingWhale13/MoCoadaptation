@@ -6,8 +6,9 @@ from utils import BestEpisodesVideoRecorder
 #import wandb
 
 class HalfCheetahEnvMO(object):
-    def __init__(self, config = {'env' : {'render' : True, 'record_video': False}}):
+    def __init__(self, reward_scaling, config = {'env' : {'render' : True, 'record_video': False}}):
         self._config = config
+        self._reward_scaling = reward_scaling
         self._render = self._config['env']['render']
         self._record_video = self._config['env']['record_video']
         self._current_design = [1.0] * 6
@@ -41,7 +42,7 @@ class HalfCheetahEnvMO(object):
         state = np.append(state, self._config_numpy)
         info['orig_action_cost'] = 0.1 * np.mean(np.square(a))
         info['orig_reward'] = reward # Reward vector scaling?
-
+        reward[1] *= self._reward_scaling  # Reward scaling for energy consumption
         #self.wandb
         #wandb.log({"Reward run" :reward[0], "Reward energy": reward[1]})
 

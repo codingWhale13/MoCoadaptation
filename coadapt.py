@@ -89,12 +89,13 @@ class Coadaptation(object):
         # TODO This should not depend on rl_algorithm_config in the future
         self._episode_length = self._config['steps_per_episodes']
         self._reward_scale = 1.0 #self._config['rl_algorithm_config']['algo_params']['reward_scale']
+        self._reward_scale_energy = 0.27532 # scaling for energy consumption, since energy consumption is approximately 1.725 larger than 
 
         self._weights_pref = self._config['weights'][choice]#NEEDED FOR MORL
         self._weights_pref = torch.tensor(self._weights_pref).reshape(2, 1).to("cuda")
 
         self._env_class = select_environment(self._config['env']['env_name'])
-        self._env = evoenvs.HalfCheetahEnvMO(config=self._config)#evoenvs.HalfCheetahEnv(config=self._config) # Need to be changed to MORL HalfCheetahMoEnv
+        self._env = evoenvs.HalfCheetahEnvMO(reward_scaling=self._reward_scale_energy,config=self._config)#evoenvs.HalfCheetahEnv(config=self._config) # Need to be changed to MORL HalfCheetahMoEnv
 
         self._replay = EvoReplayLocalGlobalStart(self._env, # Should work as it is since rewards as passed as a dict 'obj' or numpy array
             max_replay_buffer_size_species=int(1e6),
@@ -195,7 +196,7 @@ class Coadaptation(object):
             # TODO this has to be fixed _variant_spec
             reward = reward * self._reward_scale
             terminal = np.array([done])
-            reward = reward # reward = np.array([reward]) # No need to be converted to numpy array since rewards are now in np.array([0], [1])  
+            #reward = reward # reward = np.array([reward]) # No need to be converted to numpy array since rewards are now in np.array([0], [1])  
             self._replay.add_sample(observation=state, action=action, reward=reward, next_observation=new_state,
                            terminal=terminal)
             state = new_state
@@ -234,7 +235,8 @@ class Coadaptation(object):
             action, _ = self._policy_cpu.get_action(state, deterministic=True)
             new_state, reward, done, info = self._env.step(action)
             action_cost += info['orig_action_cost']
-            reward_ep = np.add(reward_ep, reward, casting='unsafe') #NOT WORKING  #SORL#reward_ep += float(reward) # changes need to be made here to convert scalar rewards to tuple or np.array
+            #reward_ep += float(reward) #NOT WORKING  #SORL # changes need to be made here to convert scalar rewards to tuple or np.array
+            reward_ep = np.add(reward_ep, reward, casting='unsafe') # MORL
             #reward_original += info['orig_reward'] #SORL#reward_original += float(info['orig_reward']) 
             #reward_original = np.add(reward_original,info['orig_reward'], casting='unsafe') # needed for UFucOutputCastingError # updated for update3 #update 6, unneeded?
             state = new_state
