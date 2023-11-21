@@ -150,7 +150,7 @@ sac_pso_sim = {
     'env' : dict(
         env_name='HalfCheetah',
         render=True,
-        record_video=False,#True, #False # Remember to turn off when you do you want to record video or train in cloud etc...
+        record_video=False#True, #False # Remember to turn off when you do you want to record video or train in cloud etc...
     ),
     }
 
