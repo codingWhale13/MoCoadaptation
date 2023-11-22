@@ -79,3 +79,8 @@ class HalfCheetahEnvMO(object):
 
     def get_design_dimensions(self):
         return copy.copy(self._design_dims)
+    
+    def load_design_dimensions(self, dimensions : list):
+        self._current_design = dimensions
+        self._config_numpy = dimensions
+        

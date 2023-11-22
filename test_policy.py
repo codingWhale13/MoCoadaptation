@@ -10,11 +10,11 @@ import csv
 
 #path='/home/oskar/Thesis/checkpoint_design_60' #data.pkl
 #path='/home/oskar/Thesis/Results_scalarized/results_with_wandb/Wed_Oct_18_18:29:14_2023__49c4bc4c/checkpoints/checkpoint_design_60.chk' # works
-path='/home/oskar/Thesis/Results_scalarized/results_with_rescaling/Thu_Nov_16_22:30:22_2023__62da74fe_0._1./checkpoints/checkpoint_design_60.chk' 
+path='/home/oskar/Thesis/Results_scalarized/results_with_rescaling/Thu_Nov_16_21:54:23_2023__cbea1a7e_1._.0/checkpoints/checkpoint_design_46.chk' 
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
 weight_index = 8 #Set as what the data was for # in this case 8
-project_name = "coadapt-scaled-test"#"coadapt-testing-scaling-tests"
-run_name = "0, 1, 5"#"1, 0, 7"
+project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
+run_name = "test" #"0, 1, 5"#"1, 0, 7"
 
 if __name__ == "__main__": 
 
@@ -37,6 +37,14 @@ if __name__ == "__main__":
     
     #iterations
     n = 30
+    
+    print(coadapt_test._data_design_type)
+    print(coadapt_test._env.get_current_design())
+    #coadapt_test._env.load_design_dimensions([0.1, 1, 1, 1, 1, 1])
+    #coadapt_test._env.load_design_dimensions([1.16513724, 0.83658113, 1.11166463, 0.96295299, 0.83459136, 1.27074335])
+    coadapt_test._env.load_design_dimensions([2, 2, 2, 2, 2, 2])
+    #coadapt_test._env.load_design_dimensions([0, 0, 0, 0, 0, 0])
+    #print(coadapt_test._env.get_current_design())
     
     with open(
             os.path.join(file_path,
