@@ -42,11 +42,12 @@ for directoryname in os.listdir(path):
                 #print(f"running_speed_returns_sum_mean': {np.mean(total_run_spd_reward)}, 'energy_consumption_returns_sum_mean': {np.mean(total_energy_cons_reward)}")
                 
 value_sums_mean_sorted = dict(sorted(value_sums_mean.items()))
+#value_sums = dict(sorted(value_sums.items())) Not needed since value_std indexes from sorted keys from 'directories'
 directories = sorted(list(value_sums_mean.keys()))
 
 value_std = {index: [np.std(value_sums[index]['running_speed_returns_sum'], axis=0),
                     np.std(value_sums[index]['energy_consumption_returns_sum'], axis=0)]
-             for index in sorted(list(value_sums.keys()))}
+             for index in directories}
 
 running_speed_sums = [item['running_speed_returns_sum_mean'] for item in value_sums_mean_sorted.values()]
 energy_cons_sums = [item['energy_consumption_returns_sum_mean'] for item in value_sums_mean_sorted.values()]
@@ -54,19 +55,20 @@ energy_cons_sums = [item['energy_consumption_returns_sum_mean'] for item in valu
 #Plotting
 fig, ax = plt.subplots()
 bar_width = 0.3
+off_set = 0.15
 index = np.arange(len(directories))
 
-bar1 = ax.bar(index - 0.15, running_speed_sums, bar_width, align='center', label='Running Speed', alpha=1)
-bar2 = ax.bar(index + 0.15, energy_cons_sums, bar_width, align='center', label='Energy Consumption', alpha=1)
+bar1 = ax.bar(index - off_set , running_speed_sums, bar_width, label='Running Speed')
+bar2 = ax.bar(index + off_set , energy_cons_sums, bar_width, label='Energy Consumption')
 #DO not work if the energy has smaller values than the running speed!
 #bar2 = ax.bar(index, [energy_cons_sums[value]-running_speed_sums[value] for value, _ in enumerate(energy_cons_sums)], bar_width, label='Energy Consumption', bottom=running_speed_sums) # less efficient with enumerate
 #bar2 = ax.bar(index, [energy - running_speed for energy, running_speed in zip(energy_cons_sums, running_speed_sums)], bar_width, label='Energy Consumption', bottom=running_speed_sums)
 
 #std error bars 
-ax.errorbar(index - bar_width / 2, [value_sums_mean[index]['running_speed_returns_sum_mean'] for index in directories],
-            yerr=[value_std[index][0] for index in directories], fmt='none', color='black', capsize=5)
-ax.errorbar(index + bar_width / 2, [value_sums_mean[index]['energy_consumption_returns_sum_mean'] for index in directories],
-            yerr=[value_std[index][1] for index in directories], fmt='none', color='black', capsize=5)
+ax.errorbar(index - off_set , [value_sums_mean[index]['running_speed_returns_sum_mean'] for index in directories],
+            yerr=[value_std[index][0] for index in directories], fmt='none', color='black', capsize=7)
+ax.errorbar(index + off_set , [value_sums_mean[index]['energy_consumption_returns_sum_mean'] for index in directories],
+            yerr=[value_std[index][1] for index in directories], fmt='none', color='black', capsize=7)
 
 ax.set_xlabel('Weights')
 ax.set_ylabel('Mean sums')
