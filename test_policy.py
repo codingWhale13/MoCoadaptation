@@ -10,8 +10,8 @@ import numpy as np
 
 #Add path to checkpoint and path to model folder
 #path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_21:54:23_2023__cbea1a7e_1._.0/checkpoints/checkpoint_design_46.chk' 
-path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_22:30:22_2023__62da74fe_0._1./checkpoints/checkpoint_design_60.chk' 
-path_model_morphology='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_22:30:22_2023__62da74fe_0._1.'
+path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Wed_Nov_22_18:10:44_2023__07f5af99_0.01_0.99/checkpoints/checkpoint_design_60.chk' 
+path_model_morphology='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Wed_Nov_22_18:10:44_2023__07f5af99_0.01_0.99'
 model_checkpoint_num = path_model_checkpoint.split('_')[-1][:-4]
 morphology_number = model_checkpoint_num  + ".csv"
 newline=''
@@ -23,7 +23,7 @@ run_name = "test" #"0, 1, 5"#"1, 0, 7"
 
 def read_morphology(path) -> list:
     
-    """ Returns a list of link lengths
+    """ Returns a list of values read from cvs file per row
     
     Returns:
         a list containing csv file values
@@ -32,7 +32,6 @@ def read_morphology(path) -> list:
     for filename in os.listdir(path):
         if filename.endswith(morphology_number):
             filepath = os.path.join(path, filename)
-            #print(filepath)
             with open(filepath, newline=newline) as file:
                 reader = csv.reader(file)
                 for row in reader:
@@ -43,7 +42,7 @@ if __name__ == "__main__":
 
     model_file = read_morphology(path_model_morphology) # read model csv file as list
     link_lengths = np.array(model_file[1], dtype=float) # index link lengths from the file
-    print(link_lengths)
+    #print(link_lengths)
     
     folder = experiment_config['data_folder'] #MORL
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
@@ -58,28 +57,18 @@ if __name__ == "__main__":
     coadapt_test = coadapt.Coadaptation(experiment_config, weight_index, project_name, run_name)
     #load the networks
     coadapt_test.load_networks(path_model_checkpoint)
-    #simulate the model
-    
+    #filepath
     file_path = coadapt_test._config['data_folder_experiment']
-    
     #iterations
-    n = 30#100#30
-    
-    print(coadapt_test._env.get_current_design())
-    #coadapt_test._env.load_design_dimensions([0.1, 1, 1, 1, 1, 1])
-    #coadapt_test._env.load_design_dimensions([1.16513724, 0.83658113, 1.11166463, 0.96295299, 0.83459136, 1.27074335])
-    #coadapt_test._env.load_design_dimensions([2, 2, 2, 2, 2, 2])
-    #coadapt_test._env.load_design_dimensions([0, 0, 0, 0, 0, 0])
-    #print(coadapt_test._data_design_type)
-    #coadapt_test._env.load_design_dimensions(link_lengths)
+    n = 30
+    #print(coadapt_test._env.get_current_design())
     coadapt_test._env.set_new_design(link_lengths) # Set new link lenghts
-    print(coadapt_test._env.get_current_design())
-    
+    #print(coadapt_test._env.get_current_design())
     with open(
             os.path.join(file_path,
                 'episodic_rewards_run_{}.csv'.format(run_name)
                 ), 'w') as fd:
-        
+        #simulate the model
         for i in range(n):
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
