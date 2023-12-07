@@ -10,8 +10,12 @@ import numpy as np
 
 #Add path to checkpoint and path to model folder
 #path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_21:54:23_2023__cbea1a7e_1._.0/checkpoints/checkpoint_design_46.chk' 
-path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Wed_Nov_22_18:10:44_2023__07f5af99_0.01_0.99/checkpoints/checkpoint_design_60.chk' 
-path_model_morphology='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Wed_Nov_22_18:10:44_2023__07f5af99_0.01_0.99'
+path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_22:17:24_2023__6ade86ee_.9_.1/checkpoints/checkpoint_design_60.chk' 
+path_model_morphology='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/Thu_Nov_16_22:17:24_2023__6ade86ee_.9_.1'
+#unscaled models
+# path_model_checkpoint='/home/oskar/Thesis/Model_scalarized/results_with_no_rescaling(old)/Wed_Oct_18_18:29:24_2023__a18577fe_1_0/checkpoints/checkpoint_design_60.chk' 
+# path_model_morphology='/home/oskar/Thesis/Model_scalarized/results_with_no_rescaling(old)/Wed_Oct_18_18:29:24_2023__a18577fe_1_0'
+
 model_checkpoint_num = path_model_checkpoint.split('_')[-1][:-4]
 morphology_number = model_checkpoint_num  + ".csv"
 newline=''

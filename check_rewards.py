@@ -4,6 +4,7 @@ import numpy as np
 import os
 
 path='/home/oskar/Thesis/episodic_rewards_scaled'
+#path='/home/oskar/Thesis/episodic_rewards_unscaled'
 newline=''
 
 value_sums = {}
@@ -36,8 +37,10 @@ value_sums_mean_sorted = dict(sorted(value_sums_mean.items())) # sort keys
 #print(value_sums_mean_sorted)
 #directories = list(sorted(value_sums_mean.keys())) # ORIG
 #print(directories)
-
+#scaled
 key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
+#unscaled
+#key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
 #print(key_order)
 value_sums_mean_sorted = {key: value_sums_mean_sorted[key] for key in key_order}
 
@@ -75,7 +78,7 @@ ax.set_xticklabels(key_order)
 ax.legend()
 
 fig2, ax2 = plt.subplots()
-ax2.scatter(running_speed_sums, energy_cons_sums)
+ax2.scatter(running_speed_sums, energy_cons_sums, color='red')
 ax2.set_ylabel('Energy')
 ax2.set_xlabel('Speed')
 ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
@@ -83,10 +86,14 @@ ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight
 for index, weight in enumerate(key_order):
     ax2.annotate(key_order[index], (running_speed_sums[index],energy_cons_sums[index]), textcoords="offset points", xytext=(0,10), ha='center')
 #print(key_order)
+# ax2.errorbar(running_speed_sums, energy_cons_sums,
+#             xerr=[value_std[index][0] for index in key_order],
+#             yerr=[value_std[index][1] for index in key_order],
+#             fmt='none', color='black', marker='x',label="Bar plot") # ORIG
 ax2.errorbar(running_speed_sums, energy_cons_sums,
             xerr=[value_std[index][0] for index in key_order],
             yerr=[value_std[index][1] for index in key_order],
-            fmt='none', color='orange', capsize=7, label="Bar plot")
+            fmt=':b',label="Bar plot")
 ax2.legend()
 
 plt.show()

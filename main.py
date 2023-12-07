@@ -4,6 +4,9 @@ import coadapt
 import experiment_configs as cfg
 import json
 import wandb
+import torch
+import numpy as np
+import random
 
 #def main(config): # ORIG'
 def main(config_name, weight_index): # MORL
@@ -31,22 +34,18 @@ def main(config_name, weight_index): # MORL
     
     #co = coadapt.Coadaptation(config) # ORIG 
     co = coadapt.Coadaptation(config_name, weight_index, project_name, run_name) # MORL
+    # Set custom seed
+    seed = 1
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    #run coadapt
     co.run()
     wandb.finish()
 
 
 
 if __name__ == "__main__":
-    # We assume we call the program only with the name of the config we want to run
-    # nothing too complex
-    #if len(sys.argv) > 1:
-    #    config = cfg.config_dict[sys.argv[1]]
-    #else:
-    #    config = cfg.config_dict['sac_pso_sim'] #['sac_pso_batch'] # for debugging the code
-    #    #config = cfg.config_dict['base']
-    #main(config)
-    
-    # MORL
     if len(sys.argv) > 4:
         config_name = cfg.config_dict[sys.argv[1]]
         weight_index = int(sys.argv[2])
@@ -59,9 +58,8 @@ if __name__ == "__main__":
         print(config_name['weights'][weight_index])
     else:
         config_name = cfg.config_dict['sac_pso_sim']
-        weight_index = 10
+        weight_index = 0
         project_name="coadapt-save-testing"
         run_name="default-run-weight" + f"-{config_name['weights'][weight_index]}"
         print(config_name['weights'][weight_index])
-    #main(config) ORIG
     main(config_name, weight_index) # MORL
