@@ -4,15 +4,12 @@ import numpy as np
 import os
 
 path='/home/oskar/Thesis/model_comparison_results'
-path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/' # remember to change the weights -> /0.0_1.0 etc...
+path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/' # set paths correctly to folders
 newline=''
 
 value_sums = {}
 value_sums_mean = {}
 link_lenghts = {}
-
-
-
 
 def check_path(path_link, weightdir):
     #return the correct path with correct directory per weight
@@ -82,70 +79,64 @@ for directoryname in os.listdir(path):
                             total_energy_cons_reward = np.append(total_energy_cons_reward, energy_cons_reward_sum)
                             value_sums_mean[directoryname][directoryname2] = {'running_speed_returns_sum_mean':np.mean(total_run_spd_reward), 'energy_consumption_returns_sum_mean':np.mean(total_energy_cons_reward)}
                             value_sums[directoryname][directoryname2] = {'running_speed_returns_sum': total_run_spd_reward , 'energy_consumption_returns_sum': total_energy_cons_reward}
-#print(value_sums_mean['0.8_0.2'])
-#print(link_lenghts)    
-directories = list(sorted(link_lenghts.keys()))
-#print(directories)
 
-keys = value_sums_mean.keys()
-print(keys)
- 
-value_sums_mean_sorted = dict(sorted(value_sums_mean.items())) # sort keys  
-print(value_sums_mean_sorted)
+# #scaled
+# key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
+# #unscaled
+# key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
+# print(key_order)
 
-#directories = list(sorted(value_sums_mean.keys())) # ORIG
-#print(directories)
-key_order = [key for key in value_sums_mean_sorted]
+key_order_weights = list(sorted(value_sums_mean.keys()))
 
-#scaled
-#key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
-#unscaled
-#key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
-#print(key_order)
-value_sums_mean_sorted = {key: value_sums_mean_sorted[key] for key in key_order}
+for weight in range(len(key_order_weights)):
+    
+    print(key_order_weights[weight])
+    
+    key_order_runs = [key for key in value_sums_mean[key_order_weights[weight]]]
 
-value_std = {index: [np.std(value_sums[index]['running_speed_returns_sum'], axis=0),
-                    np.std(value_sums[index]['energy_consumption_returns_sum'], axis=0)]
-             for index in key_order}
+    running_speed_sums = [value_sums_mean[key_order_weights[weight]][key]['running_speed_returns_sum_mean'] for key in key_order_runs]
+    energy_cons_sums = [value_sums_mean[key_order_weights[weight]][key]['energy_consumption_returns_sum_mean'] for key in key_order_runs]
 
-running_speed_sums = [item['running_speed_returns_sum_mean'] for item in value_sums_mean_sorted.values()] # ORIG
-energy_cons_sums = [item['energy_consumption_returns_sum_mean'] for item in value_sums_mean_sorted.values()]
+
+    value_std = {index: [np.std(value_sums[key_order_weights[weight]][index]['running_speed_returns_sum'], axis=0),
+                        np.std(value_sums[key_order_weights[weight]][index]['energy_consumption_returns_sum'], axis=0)]
+                for index in key_order_runs}
 
 #Plotting
 
-fig, ax = plt.subplots()
-bar_width = 0.3
-off_set = 0.15
-index = np.arange(len(key_order))
+    fig, ax = plt.subplots()
+    bar_width = 0.3
+    off_set = 0.15
+    index = np.arange(len(key_order_runs))
 
-bar1 = ax.bar(index - off_set , running_speed_sums, bar_width, label='Running Speed')
-bar2 = ax.bar(index + off_set , energy_cons_sums, bar_width, label='Energy Consumption')
+    bar1 = ax.bar(index - off_set , running_speed_sums, bar_width, label='Running Speed')
+    bar2 = ax.bar(index + off_set , energy_cons_sums, bar_width, label='Energy Consumption')
 
-#std error bars 
-ax.errorbar(index - off_set , [value_sums_mean[index]['running_speed_returns_sum_mean'] for index in key_order],
-            yerr=[value_std[index][0] for index in key_order], fmt='none', color='black', capsize=7)
-ax.errorbar(index + off_set , [value_sums_mean[index]['energy_consumption_returns_sum_mean'] for index in key_order],
-            yerr=[value_std[index][1] for index in key_order], fmt='none', color='black', capsize=7)
+    #std error bars 
+    ax.errorbar(index - off_set , [value_sums_mean[key_order_weights[weight]][index]['running_speed_returns_sum_mean'] for index in key_order_runs],
+                yerr=[value_std[index][0] for index in key_order_runs], fmt='none', color='black', capsize=7)
+    ax.errorbar(index + off_set , [value_sums_mean[key_order_weights[weight]][index]['energy_consumption_returns_sum_mean'] for index in key_order_runs],
+                yerr=[value_std[index][1] for index in key_order_runs], fmt='none', color='black', capsize=7)
 
-ax.set_xlabel('Weights')
-ax.set_ylabel('Mean sums')
-ax.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
-ax.set_xticks(index)
-ax.set_xticklabels(key_order)
-ax.legend()
+    ax.set_xlabel('Weights')
+    ax.set_ylabel('Mean sums')
+    ax.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
+    ax.set_xticks(index)
+    ax.set_xticklabels(key_order_runs)
+    ax.legend()
 
-fig2, ax2 = plt.subplots()
-ax2.scatter(running_speed_sums, energy_cons_sums, color='red')
-ax2.set_ylabel('Energy')
-ax2.set_xlabel('Speed')
-ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(running_speed_sums, energy_cons_sums, color='red')
+    ax2.set_ylabel('Energy')
+    ax2.set_xlabel('Speed')
+    ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
 
-for index, weight in enumerate(key_order):
-    ax2.annotate(key_order[index], (running_speed_sums[index],energy_cons_sums[index]), textcoords="offset points", xytext=(0,10), ha='center')
-ax2.errorbar(running_speed_sums, energy_cons_sums,
-            xerr=[value_std[index][0] for index in key_order],
-            yerr=[value_std[index][1] for index in key_order],
-            fmt=':b',label="Bar plot")
-ax2.legend()
+    for index, weight in enumerate(key_order_runs):
+        ax2.annotate(key_order_runs[index], (running_speed_sums[index],energy_cons_sums[index]), textcoords="offset points", xytext=(0,10), ha='center')
+    ax2.errorbar(running_speed_sums, energy_cons_sums,
+                xerr=[value_std[index][0] for index in key_order_runs],
+                yerr=[value_std[index][1] for index in key_order_runs],
+                fmt=':b',label="Bar plot")
+    ax2.legend()
 
-plt.show()
+    plt.show()
