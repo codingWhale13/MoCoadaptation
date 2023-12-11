@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-path='/home/oskar/Thesis/model_comparison_results'
-path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/' # set paths correctly to folders
+path='/home/oskar/Thesis/model_comparison_results' # paths need to be correct
+path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/' # remember to set the directories correctly
 newline=''
 
 value_sums = {}
@@ -12,9 +12,32 @@ value_sums_mean = {}
 link_lenghts = {}
 
 def check_path(path_link, weightdir):
+    """ Check the path to model
+
+    Args:
+        path_link (_type_): _description_
+        weightdir (_type_): _description_
+
+    Returns: path for correct weight
+    """    
     #return the correct path with correct directory per weight
     path_dir = os.path.join(path_link, weightdir)
     return path_dir
+
+def find_checkpoint(path_to_directory):
+    """ Find the checkpoint for the model
+
+    Returns: returns the int value of the last checkpoint or None
+    """    
+    checkpoints = []
+    for file in os.listdir(path_to_directory):    
+        if file.endswith('.csv'):
+            checkpoint = int(file.split('_')[-1][:-4])
+            checkpoints.append(checkpoint)
+    if checkpoints:
+        return max(checkpoints)
+    else:
+        return None
 
 def read_morphology(morphologydirname, weightdir, morphology_number) -> list:
     
@@ -25,13 +48,15 @@ def read_morphology(morphologydirname, weightdir, morphology_number) -> list:
     """    
     rows = []
     path_dir = check_path(path_link, weightdir)
-    morphology_number = morphology_number  + ".csv"
+    morphology_number = str(morphology_number)  + ".csv"
     for dirname in os.listdir(path_dir):
         if dirname == morphologydirname:
             filepath = os.path.join(path_dir, dirname)
             for filename in os.listdir(filepath):
+                #print(morphology_number)
                 if filename.endswith(morphology_number):
                     filename2 = os.path.join(filepath, filename)
+                    #print(f" Selected morphology number : {filename}")
                     with open(filename2, newline=newline) as file:
                         reader = csv.reader(file)
                         for row in reader:
@@ -44,21 +69,25 @@ for directoryname in os.listdir(path):
     value_sums[directoryname] = {}
     if os.path.isdir(directorypath):
         for directoryname2 in os.listdir(directorypath):
+            #Set new directory path
+            directorypath2 = os.path.join(directorypath, directoryname2)
+            #print(f"directory path 2: {directorypath2}")
+            
             morphologydir = directoryname2[:-2]
             # since link lenghts are saved in different files, we will need to know the weights to access the correct directory
             weightdir = morphologydir.split('[')[-1]
             weightdir = weightdir[:-1]
             weightdir = weightdir.replace(", ", "_")
-            # check for morphology number since one iteration has 59, its hardcoded value here, otherwise we always just want the 60 design
-            if morphologydir == 'Tue_Dec__5_19:07:12_2023__c7d34aee[0.0, 1.0]':
-                num = '59'
-            else:
-                num = '60'
-            model_file = read_morphology(morphologydir, weightdir, num) # read model csv file as list
-            link_lengths = np.array(model_file[1], dtype=float) # index link lengths from the file
-            link_lenghts[directoryname2] = link_lengths 
-            directorypath2 = os.path.join(directorypath, directoryname2)
             
+            #find correct checkpoint for morphology
+            checkpoint_path = os.path.join(path_link, weightdir)
+            morphology_num = find_checkpoint(os.path.join(checkpoint_path, morphologydir))
+            model_file = read_morphology(morphologydir, weightdir, morphology_num) # read model csv file as list
+            #print(model_file)
+            link_lengths_ind = np.array(model_file[1], dtype=float) # index link lengths from the file
+            link_lenghts[directoryname2] = link_lengths_ind 
+            
+            # Go through and save data to dictionaries
             if os.path.isdir(directorypath2):
                 total_run_spd_reward = np.array([]) #reset when in new directory
                 total_energy_cons_reward = np.array([])
@@ -86,12 +115,15 @@ for directoryname in os.listdir(path):
 # key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
 # print(key_order)
 
+print(f" Links of the models: {link_lenghts}")
+
 key_order_weights = list(sorted(value_sums_mean.keys()))
 
 for weight in range(len(key_order_weights)):
     
-    print(key_order_weights[weight])
+    #print(key_order_weights[weight])
     
+    #values per iteration, each iteration goes through another weight
     key_order_runs = [key for key in value_sums_mean[key_order_weights[weight]]]
 
     running_speed_sums = [value_sums_mean[key_order_weights[weight]][key]['running_speed_returns_sum_mean'] for key in key_order_runs]
@@ -102,7 +134,7 @@ for weight in range(len(key_order_weights)):
                         np.std(value_sums[key_order_weights[weight]][index]['energy_consumption_returns_sum'], axis=0)]
                 for index in key_order_runs}
 
-#Plotting
+    #Plotting
 
     fig, ax = plt.subplots()
     bar_width = 0.3
