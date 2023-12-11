@@ -17,7 +17,10 @@ def main(config_name, weight_index): # MORL
     #generate random hash string - unique identifier if we startexi
     # multiple experiments at the same time
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
-    file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + str(config_name['weights'][weight_index])
+    if seed:
+        file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + str(config_name['weights'][weight_index]) + '_' + str(seed)# add seed to filename
+    else:
+        file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + str(config_name['weights'][weight_index]) # do not add the seed to filename
     #config['data_folder_experiment'] = file_str # ORIG
     config_name['data_folder_experiment'] = file_str # MORL
 
