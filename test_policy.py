@@ -8,7 +8,10 @@ import wandb
 import csv
 import numpy as np
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/0.8_0.2/Tue_Dec__5_18:48:22_2023__894e9028[0.8, 0.2]' # put path to folder of model here
+# put path to folder of model here, seed, weight and model folder name, aka last three parts from path
+# example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
+
+path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/0.8_0.2/Thu_Dec__7_20:56:48_2023__878baf28[0.8, 0.2]' 
 
 newline=''
 
@@ -51,7 +54,7 @@ def read_morphology(path, checkpoint) -> list:
 if __name__ == "__main__": 
 
     #Use to get last model checkpoint
-    last_model_checkpoint_num = find_checkpoint(path_to_folder)
+    last_model_checkpoint_num = find_checkpoint(path_to_folder)#-1 # checkpoint
     last_model_checkpoint = f'checkpoint_design_{last_model_checkpoint_num}.chk'
     print("path_to_folder:", path_to_folder)
     print("last_model_checkpoint_num:", last_model_checkpoint_num)
@@ -89,11 +92,24 @@ if __name__ == "__main__":
                 'episodic_rewards_run_{}.csv'.format(run_name)
                 ), 'w') as fd:
         #simulate the model
+        running_speed = []
+        energy_saving = []
         for i in range(n):
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
             coadapt_test.execute_policy()
-            cwriter.writerow([coadapt_test._data_reward_1[0], coadapt_test._data_reward_2[0]])
+            
+            # Quick note, it would be more efficient to have the results within the link lenghts themselves within results and write everything on 3 rows
+            # but that would make the previous test run files obsolete since you couldnt read the easily in the same way. This should be the way things are done later on.
+            #cwriter.writerow([coadapt_test._data_reward_1[0], coadapt_test._data_reward_2[0]]) # original
+            
+            #append iteration results to lists
+            running_speed.append(coadapt_test._data_reward_1[0])
+            energy_saving.append(coadapt_test._data_reward_2[0])
             print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
-    
+        #save results to csv file
+        cwriter.writerow(link_lengths)
+        cwriter.writerow(running_speed)
+        cwriter.writerow(energy_saving)
+        
     wandb.finish()

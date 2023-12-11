@@ -3,13 +3,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-path='/home/oskar/Thesis/episodic_rewards_scaled'
-#path='/home/oskar/Thesis/episodic_rewards_unscaled'
+###!!!###
+#This is meant for using older way of saved result csv files, the csv files have changed row writing now.
+###!!!###
+
+
+path='/home/oskar/Thesis/episodic_rewards_scaled_old'
+#path='/home/oskar/Thesis/episodic_rewards_unscaled_old'
 newline=''
 
 value_sums = {}
 value_sums_mean = {}
-link_lenghts = {}
 
 for directoryname in os.listdir(path):
     #print(f"dir name found: {directoryname}")
@@ -17,25 +21,20 @@ for directoryname in os.listdir(path):
     if os.path.isdir(directorypath):
         total_run_spd_reward = np.array([]) #reset when in new directory
         total_energy_cons_reward = np.array([])
-        link_lenghts_ind = np.array([])
         for filename in os.listdir(directorypath):
             if filename.endswith(".csv"):
                 filepath = os.path.join(directorypath, filename)
                 with open(filepath, newline=newline) as file:
                     reader = csv.reader(file)
-                    rows = []
                     running_speed_reward = np.array([])#reset when in new file
                     energy_consumption_reward = np.array([])
                     for row in reader:
-                        #running_speed_reward = np.append(running_speed_reward, float(row[0]))
-                        #energy_consumption_reward = np.append(energy_consumption_reward, float(row[1]))
-                        rows.append(row)
-                    run_speed_sum_reward_sum = np.sum(rows[1])
-                    energy_cons_reward_sum = np.sum(rows[2])
-                    link_lenghts_ind = np.append(link_lenghts_ind, rows[0])
+                        running_speed_reward = np.append(running_speed_reward, float(row[0]))
+                        energy_consumption_reward = np.append(energy_consumption_reward, float(row[1]))
+                    run_speed_sum_reward_sum = np.sum(running_speed_reward)
+                    energy_cons_reward_sum = np.sum(energy_consumption_reward)
                     total_run_spd_reward = np.append(total_run_spd_reward, run_speed_sum_reward_sum)
                     total_energy_cons_reward = np.append(total_energy_cons_reward, energy_cons_reward_sum)
-                link_lenghts[directoryname] = {'link_lenghts' : link_lenghts_ind}
                 value_sums_mean[directoryname] = {'running_speed_returns_sum_mean':np.mean(total_run_spd_reward), 'energy_consumption_returns_sum_mean':np.mean(total_energy_cons_reward)}
                 value_sums[directoryname] = {'running_speed_returns_sum': total_run_spd_reward , 'energy_consumption_returns_sum': total_energy_cons_reward}
            
@@ -44,8 +43,6 @@ value_sums_mean_sorted = dict(sorted(value_sums_mean.items())) # sort keys
 #directories = list(sorted(value_sums_mean.keys())) # ORIG
 #print(directories)
 #scaled
-print(f"link lenghts: {link_lenghts}")
-
 key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
 #unscaled
 #key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99

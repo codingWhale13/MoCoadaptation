@@ -3,17 +3,70 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-### CANNOT BE USED WITH OLD CSV FILES ###
-### NEW VERSION ###
+### Version for the csv files which dont have morphology saved on in the rewards csv files ###
+### OLD ###
 
 
 path='/home/oskar/Thesis/model_comparison_results' # paths need to be correct
-path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random seed/' # remember to set the directories correctly
+path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random_seed/' # remember to set the directories correctly
 newline=''
 
 value_sums = {}
 value_sums_mean = {}
 link_lenghts = {}
+
+def check_path(path_link, weightdir):
+    """ Check the path to model
+
+    Args:
+        path_link (_type_): _description_
+        weightdir (_type_): _description_
+
+    Returns: path for correct weight
+    """    
+    #return the correct path with correct directory per weight
+    path_dir = os.path.join(path_link, weightdir)
+    return path_dir
+
+def find_checkpoint(path_to_directory):
+    """ Find the checkpoint for the model
+
+    Returns: returns the int value of the last checkpoint or None
+    """    
+    checkpoints = []
+    for file in os.listdir(path_to_directory):    
+        if file.endswith('.csv'):
+            checkpoint = int(file.split('_')[-1][:-4])
+            checkpoints.append(checkpoint)
+    if checkpoints:
+        return max(checkpoints)
+    else:
+        return None
+
+def read_morphology(morphologydirname, weightdir, morphology_number) -> list:
+    
+    """ Returns a list of values read from cvs file per row
+    
+    Returns:
+        a list containing csv file values
+    """    
+    rows = []
+    path_dir = check_path(path_link, weightdir)
+    morphology_number = str(morphology_number)  + ".csv"
+    for dirname in os.listdir(path_dir):
+        if dirname == morphologydirname:
+            filepath = os.path.join(path_dir, dirname)
+            for filename in os.listdir(filepath):
+                #print(morphology_number)
+                if filename.endswith(morphology_number):
+                    filename2 = os.path.join(filepath, filename)
+                    #print(f" Selected morphology number : {filename}")
+                    with open(filename2, newline=newline) as file:
+                        reader = csv.reader(file)
+                        for row in reader:
+                            rows.append(row)
+    return rows
+
 
 for directoryname in os.listdir(path):
     directorypath = os.path.join(path, directoryname)
@@ -25,6 +78,21 @@ for directoryname in os.listdir(path):
             #Set new directory path
             directorypath2 = os.path.join(directorypath, directoryname2)
             #print(f"directory path 2: {directorypath2}")
+            
+            morphologydir = directoryname2[:-2]
+            # since link lenghts are saved in different files, we will need to know the weights to access the correct directory
+            weightdir = morphologydir.split('[')[-1]
+            weightdir = weightdir[:-1]
+            weightdir = weightdir.replace(", ", "_")
+            
+            #find correct checkpoint for morphology
+            checkpoint_path = os.path.join(path_link, weightdir)
+            morphology_num = find_checkpoint(os.path.join(checkpoint_path, morphologydir))
+            model_file = read_morphology(morphologydir, weightdir, morphology_num) # read model csv file as list
+            #print(model_file)
+            link_lengths_ind = np.array(model_file[1], dtype=float) # index link lengths from the file
+            link_lenghts[directoryname2] = link_lengths_ind 
+            
             # Go through and save data to dictionaries
             if os.path.isdir(directorypath2):
                 total_run_spd_reward = np.array([]) #reset when in new directory
