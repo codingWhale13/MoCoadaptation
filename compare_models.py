@@ -15,6 +15,13 @@ value_sums = {}
 value_sums_mean = {}
 link_lenghts = {}
 
+def convert_key_to_tuple(key):
+    #return a tuple of values based on which the keys are sorted
+    key_values = key.split('_')
+    key_values = [value for value in key_values if value] 
+    #print(tuple(map(float, key_values)))
+    return tuple(map(float, key_values))
+
 for directoryname in os.listdir(path):
     directorypath = os.path.join(path, directoryname)
     #Set up dictionaries
@@ -47,66 +54,70 @@ for directoryname in os.listdir(path):
                             value_sums_mean[directoryname][directoryname2] = {'running_speed_returns_sum_mean':np.mean(total_run_spd_reward), 'energy_consumption_returns_sum_mean':np.mean(total_energy_cons_reward)}
                             value_sums[directoryname][directoryname2] = {'running_speed_returns_sum': total_run_spd_reward , 'energy_consumption_returns_sum': total_energy_cons_reward}
 
-# #scaled
-# key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
-# #unscaled
-# key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
-# print(key_order)
+#print(f" Links of the models: {link_lenghts}")
 
-print(f" Links of the models: {link_lenghts}")
+# Sort dictionaries based on keys
+sorted_mean_value_sums = dict(sorted(value_sums_mean.items(), key=lambda item: convert_key_to_tuple(item[0])))
+sorted_value_sums = dict(sorted(value_sums.items(), key=lambda item: convert_key_to_tuple(item[0])))
 
-key_order_weights = list(sorted(value_sums_mean.keys()))
+# Sort the inner dictionaries based on keys
+for key, inner_dict in sorted_mean_value_sums.items():
+    #print(inner_dict.items())
+    sorted_mean_value_sums[key] = dict(sorted(inner_dict.items(), key=lambda item: convert_key_to_tuple(item[0])))
 
-for weight in range(len(key_order_weights)):
-    
-    #print(key_order_weights[weight])
-    
-    #values per iteration, each iteration goes through another weight
-    key_order_runs = [key for key in value_sums_mean[key_order_weights[weight]]]
+for key, inner_dict in sorted_value_sums.items():
+    sorted_value_sums[key] = dict(sorted(inner_dict.items(), key=lambda item: convert_key_to_tuple(item[0])))
 
-    running_speed_sums = [value_sums_mean[key_order_weights[weight]][key]['running_speed_returns_sum_mean'] for key in key_order_runs]
-    energy_cons_sums = [value_sums_mean[key_order_weights[weight]][key]['energy_consumption_returns_sum_mean'] for key in key_order_runs]
+#print(f"print sorted mean value sums: {sorted_mean_value_sums }")
+#print(f"print sorted value sums : {sorted_value_sums}")
+#Calculate values
 
+reward_sums = np.array([(sorted_mean_value_sums[key1][key2]['running_speed_returns_sum_mean'], 
+                               sorted_mean_value_sums[key1][key2]['energy_consumption_returns_sum_mean']) for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()])
 
-    value_std = {index: [np.std(value_sums[key_order_weights[weight]][index]['running_speed_returns_sum'], axis=0),
-                        np.std(value_sums[key_order_weights[weight]][index]['energy_consumption_returns_sum'], axis=0)]
-                for index in key_order_runs}
+value_std = np.array([[np.std(sorted_value_sums[key1][key2]['running_speed_returns_sum'], axis=0),
+                      np.std(sorted_value_sums[key1][key2]['energy_consumption_returns_sum'], axis=0)]
+                     for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()])
 
-    #Plotting
+#Plotting
 
-    fig, ax = plt.subplots()
-    bar_width = 0.3
-    off_set = 0.15
-    index = np.arange(len(key_order_runs))
+fig, ax = plt.subplots()
+bar_width = 0.3
+off_set = 0.15
+index = np.arange(len(reward_sums))
 
-    bar1 = ax.bar(index - off_set , running_speed_sums, bar_width, label='Running Speed')
-    bar2 = ax.bar(index + off_set , energy_cons_sums, bar_width, label='Energy Consumption')
+bar1 = ax.bar(index - off_set, reward_sums[:, 0], bar_width, label='Running Speed')
+bar2 = ax.bar(index + off_set, reward_sums[:, 1], bar_width, label='Energy Consumption')
 
-    #std error bars 
-    ax.errorbar(index - off_set , [value_sums_mean[key_order_weights[weight]][index]['running_speed_returns_sum_mean'] for index in key_order_runs],
-                yerr=[value_std[index][0] for index in key_order_runs], fmt='none', color='black', capsize=7)
-    ax.errorbar(index + off_set , [value_sums_mean[key_order_weights[weight]][index]['energy_consumption_returns_sum_mean'] for index in key_order_runs],
-                yerr=[value_std[index][1] for index in key_order_runs], fmt='none', color='black', capsize=7)
+ax.errorbar(index - off_set, [sorted_mean_value_sums[key1][key2]['running_speed_returns_sum_mean']
+                              for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()],
+            yerr=[value_std[i][0] for i in range(len(value_std))], fmt='none', color='black', capsize=7)
 
-    ax.set_xlabel('Weights')
-    ax.set_ylabel('Mean sums')
-    ax.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
-    ax.set_xticks(index)
-    ax.set_xticklabels(key_order_runs)
-    ax.legend()
+ax.errorbar(index + off_set, [sorted_mean_value_sums[key1][key2]['energy_consumption_returns_sum_mean']
+                              for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()],
+            yerr=[value_std[i][1] for i in range(len(value_std))], fmt='none', color='black', capsize=7)
 
-    fig2, ax2 = plt.subplots()
-    ax2.scatter(running_speed_sums, energy_cons_sums, color='red')
-    ax2.set_ylabel('Energy')
-    ax2.set_xlabel('Speed')
-    ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
+ax.set_xlabel('Weights')
+ax.set_ylabel('Mean sums')
+ax.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
+ax.set_xticks(index)
+ax.set_xticklabels([key2 for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()], rotation=45, ha='right')
+ax.legend()
 
-    for index, weight in enumerate(key_order_runs):
-        ax2.annotate(key_order_runs[index], (running_speed_sums[index],energy_cons_sums[index]), textcoords="offset points", xytext=(0,10), ha='center')
-    ax2.errorbar(running_speed_sums, energy_cons_sums,
-                xerr=[value_std[index][0] for index in key_order_runs],
-                yerr=[value_std[index][1] for index in key_order_runs],
-                fmt=':b',label="Bar plot")
-    ax2.legend()
+fig2, ax2 = plt.subplots()
+ax2.scatter(reward_sums[:, 0], reward_sums[:, 1], color='red', label='Reward Mean')
+ax2.set_ylabel('Energy')
+ax2.set_xlabel('Speed')
+ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
 
-    plt.show()
+# Annotate points on the scatter plot
+for index, txt in enumerate([key2 for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()]):
+    ax2.annotate(txt, (reward_sums[index, 0], reward_sums[index, 1]), textcoords="offset points", xytext=(0, 10), ha='center')
+
+ax2.errorbar(reward_sums[:, 0], reward_sums[:, 1],
+    xerr=[value_std[i][0] for i in range(len(value_std))],
+    yerr=[value_std[i][1] for i in range(len(value_std))],
+    fmt='none')
+ax2.legend()
+
+plt.show()
