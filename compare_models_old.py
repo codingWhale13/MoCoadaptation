@@ -137,10 +137,10 @@ sorted_value_sums = dict(sorted(value_sums.items(), key=lambda item: convert_key
 #Sort link lenghts
 sorted_link_lengths = dict(sorted(link_lengths.items(), key=lambda item: convert_key_to_tuple(item[0])))
 labels_links = list(sorted_link_lengths.keys())
-print(labels_links)
-print(sorted_link_lengths)
+
 link_lengths_array = np.array([list(sorted_link_lengths.values())])
 
+print(link_lengths_array)
 #link_lengths_array_mean = np.mean(sorted_link_lengths.values())
 #print(link_lengths_array_mean)
 
@@ -204,48 +204,28 @@ ax2.errorbar(reward_sums[:, 0], reward_sums[:, 1],
     fmt=':b')
 ax2.legend()
 
-# #link lenghts
-# fig, axs = plt.subplots(nrows=len(labels_links), sharex=True, figsize=(8, 6))
+#DOES NOT WORK PROPERLY
 
-# for i, label in enumerate(labels_links):
-#     axs[i].bar(range(len(link_lengths_array[i])), link_lengths_array[i], label=label)
-#     axs[i].set_ylabel('Link Lengths')
-#     axs[i].set_title(f'Link Lengths for {label}')
-#     axs[i].legend()
+# test_amount = 5
+# num_figures = len(labels_links) // test_amount
 
-# axs[-1].set_xlabel('Link Index')
-# plt.tight_layout()
+# link_lengths_array_mean = np.array([])
+# for i in range(num_figures) : link_lengths_array_mean = np.append(link_lengths_array_mean,np.mean(link_lengths_array[0][0+test_amount*i:test_amount+test_amount*i], axis=0))
+
+# # Plotting link lengths and adding average link lengths as a red line
+# for fig_num in range(num_figures):
+#     plt.figure(figsize=(15, 12))  # Adjust the figure size as needed
+#     for i in range(test_amount):
+#         index = fig_num * test_amount + i
+#         if index < len(labels_links):
+#             plt.subplot(test_amount, 1, i + 1)
+#             #plt.bar(range(len(link_lengths_array[index])), link_lengths_array[i], label=labels_links[index])
+#             plt.axhline(y=link_lengths_array_mean[index], color='red', linestyle='--', label='Average')
+#             plt.xlabel('Link Index')
+#             plt.ylabel('Link Lengths')
+#             plt.title(f'Link Lengths for {labels_links[index]}', color='orange')
+#             plt.legend()
+
 # plt.show()
 
-# for i, label in enumerate(labels_links):
-#     fig, ax = plt.subplots(figsize=(8, 6))
-#     ax.bar(range(len(link_lengths_array[i])), link_lengths_array[i], label=label)
-#     ax.set_xlabel('Link Index')
-#     ax.set_ylabel('Link Lengths')
-#     ax.set_title(f'Link Lengths for {label}')
-#     ax.legend()
-#     plt.show()
-
-test_amount = 5
-num_figures = len(labels_links) // test_amount
-
-link_lengths_array_mean = np.array([])
-for i in range(num_figures) : link_lengths_array_mean = np.append(link_lengths_array_mean,np.mean(link_lengths_array[0][0+test_amount*i:test_amount+test_amount*i], axis=0))
-print(link_lengths_array_mean)
-
-# Plotting link lengths and adding average link lengths as a red line
-for fig_num in range(num_figures):
-    plt.figure(figsize=(15, 12))  # Adjust the figure size as needed
-    for i in range(test_amount):
-        index = fig_num * test_amount + i
-        if index < len(labels_links):
-            plt.subplot(test_amount, 1, i + 1)
-            plt.bar(range(len(link_lengths_array[index])), link_lengths_array[index], label=labels_links[index])
-            plt.axhline(y=link_lengths_array_mean[index], color='red', linestyle='--', label='Average')
-            plt.xlabel('Link Index')
-            plt.ylabel('Link Lengths')
-            plt.title(f'Link Lengths for {labels_links[index]}', color='orange')
-            plt.legend()
-
-plt.show()
     
