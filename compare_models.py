@@ -130,9 +130,8 @@ ax2.set_ylabel('Energy')
 ax2.set_xlabel('Speed')
 ax2.set_title('Mean sums of Running Speed and Energy Consumption for Each Weight')
 
-
 unique_weight_groups = sorted(set([key1 for key1 in sorted_mean_value_sums.keys()]))
-print(unique_weight_groups)
+#print(unique_weight_groups)
 
 #color_dict = {weight_group: plt.cm.viridis(i / len(unique_weight_groups)) for i, weight_group in enumerate(unique_weight_groups)}
 color_dict = {weight_group: plt.get_cmap('rainbow')(i / len(unique_weight_groups)) for i, weight_group in enumerate(unique_weight_groups)}
@@ -140,7 +139,7 @@ color_dict = {weight_group: plt.get_cmap('rainbow')(i / len(unique_weight_groups
 
 
 legend_added = {} # keep track of added legends for weight groups
-print(color_dict)
+#print(color_dict)
 #colors = plt.cm.viridis(np.linspace(0, 1, len(unique_weight_groups)))
 #print(colors)
 
@@ -155,10 +154,10 @@ for index, (key1, key2) in enumerate([(key1, key2) for key1 in sorted_mean_value
     #ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], color=color_dict[unique_weight_groups[0]], label=key1)
     #ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], color=colors[weight_group], label=weight_group)
     if weight_group not in legend_added:
-        ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], color=color_dict[weight_group], label=weight_group)
+        ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], s=50, color=color_dict[weight_group], label=weight_group)
         legend_added[weight_group] = True
     else:
-        ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], color=color_dict[weight_group])
+        ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], s=50, color=color_dict[weight_group])
 
 
 # Annotate points on the scatter plot
