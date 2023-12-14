@@ -9,21 +9,13 @@ import matplotlib.patches as mpatches
 ### Version for the csv files which dont have morphology saved on in the rewards csv files ###
 ### OLD ###
 
-
-path='/home/oskar/Thesis/model_comparison_results_old' # paths need to be correct
-path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random_seed/' # remember to set the directories correctly
-newline=''
-
-value_sums = {}
-value_sums_mean = {}
-link_lengths = {}
-
 def convert_key_to_tuple(key):
     #return a tuple of values based on which the keys are sorted
     key_values = key.split('_')
     key_values = [value for value in key_values if value] 
     #print(tuple(map(float, key_values)))
     return tuple(map(float, key_values))
+
 
 def check_path(path_link, weightdir):
     """ Check the path to model
@@ -37,6 +29,7 @@ def check_path(path_link, weightdir):
     #return the correct path with correct directory per weight
     path_dir = os.path.join(path_link, weightdir)
     return path_dir
+
 
 def find_checkpoint(path_to_directory):
     """ Find the checkpoint for the model
@@ -52,6 +45,7 @@ def find_checkpoint(path_to_directory):
         return max(checkpoints)
     else:
         return None
+
 
 def read_morphology(morphologydirname, weightdir, morphology_number) -> list:
     
@@ -76,6 +70,15 @@ def read_morphology(morphologydirname, weightdir, morphology_number) -> list:
                         for row in reader:
                             rows.append(row)
     return rows
+
+
+path='/home/oskar/Thesis/model_comparison_results_old' # paths need to be correct
+path_link='/home/oskar/Thesis/Model_scalarized/results_with_rescaling/random_seed/' # remember to set the directories correctly
+newline=''
+
+value_sums = {}
+value_sums_mean = {}
+link_lengths = {}
 
 
 for directoryname in os.listdir(path):
@@ -140,7 +143,7 @@ labels_links = list(sorted_link_lengths.keys())
 
 link_lengths_array = np.array([list(sorted_link_lengths.values())])
 
-print(link_lengths_array)
+#print(link_lengths_array)
 #link_lengths_array_mean = np.mean(sorted_link_lengths.values())
 #print(link_lengths_array_mean)
 
@@ -152,7 +155,7 @@ for key, inner_dict in sorted_mean_value_sums.items():
 for key, inner_dict in sorted_value_sums.items():
     sorted_value_sums[key] = dict(sorted(inner_dict.items(), key=lambda item: convert_key_to_tuple(item[0]))) 
 
-print(f" Links of the models: {sorted_link_lengths}")
+#print(f" Links of the models: {sorted_link_lengths}")
 
 #Calculate values
 
@@ -204,6 +207,7 @@ ax2.errorbar(reward_sums[:, 0], reward_sums[:, 1],
     fmt=':b')
 ax2.legend()
 
+
 #DOES NOT WORK PROPERLY
 
 # test_amount = 5
@@ -226,6 +230,6 @@ ax2.legend()
 #             plt.title(f'Link Lengths for {labels_links[index]}', color='orange')
 #             plt.legend()
 
-# plt.show()
+plt.show()
 
     

@@ -3,6 +3,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+
+
+def convert_key_to_tuple(key):
+    #return a tuple of values based on which the keys are sorted
+    key_values = key.split('_')
+    key_values = [value for value in key_values if value] 
+    #print(tuple(map(float, key_values)))
+    return tuple(map(float, key_values))
+
+
+
 path='/home/oskar/Thesis/episodic_rewards_scaled'
 #path='/home/oskar/Thesis/episodic_rewards_unscaled'
 newline=''
@@ -11,28 +22,30 @@ value_sums = {}
 value_sums_mean = {}
 link_lenghts = {}
 
+
 for directoryname in os.listdir(path):
     #print(f"dir name found: {directoryname}")
     directorypath = os.path.join(path, directoryname)
     if os.path.isdir(directorypath):
-        total_run_spd_reward = np.array([]) #reset when in new directory
-        total_energy_cons_reward = np.array([])
-        link_lenghts_ind = np.array([])
+        # total_run_spd_reward = np.array([]) #reset when in new directory
+        # total_energy_cons_reward = np.array([])
+        # link_lenghts_ind = np.array([])
         for filename in os.listdir(directorypath):
             if filename.endswith(".csv"):
                 filepath = os.path.join(directorypath, filename)
                 with open(filepath, newline=newline) as file:
                     reader = csv.reader(file)
                     rows = []
+                    total_run_spd_reward = np.array([]) #reset when in new file
+                    total_energy_cons_reward = np.array([])
+                    link_lenghts_ind = np.array([])
                     running_speed_reward = np.array([])#reset when in new file
                     energy_consumption_reward = np.array([])
                     for row in reader:
-                        #running_speed_reward = np.append(running_speed_reward, float(row[0]))
-                        #energy_consumption_reward = np.append(energy_consumption_reward, float(row[1]))
                         rows.append(row)
-                    run_speed_sum_reward_sum = np.sum(rows[1])
-                    energy_cons_reward_sum = np.sum(rows[2])
-                    link_lenghts_ind = np.append(link_lenghts_ind, rows[0])
+                    run_speed_sum_reward_sum = np.sum(np.array(rows[1], dtype=float))
+                    energy_cons_reward_sum = np.sum(np.array(rows[2], dtype=float))
+                    link_lenghts_ind = np.append(link_lenghts_ind, np.array(rows[0], dtype=float))
                     total_run_spd_reward = np.append(total_run_spd_reward, run_speed_sum_reward_sum)
                     total_energy_cons_reward = np.append(total_energy_cons_reward, energy_cons_reward_sum)
                 link_lenghts[directoryname] = {'link_lenghts' : link_lenghts_ind}
@@ -46,10 +59,13 @@ value_sums_mean_sorted = dict(sorted(value_sums_mean.items())) # sort keys
 #scaled
 print(f"link lenghts: {link_lenghts}")
 
-key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
+#key_order = ['0.0_1.0', '0.01_0.99'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '0.01_0.99', '1.0_0.0', '0.99_0.01']] + ['0.99_0.01', '1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
 #unscaled
 #key_order = ['0.0_1.0'] + [key for key in value_sums_mean_sorted if key not in ['0.0_1.0', '1.0_0.0']] + ['1.0_0.0'] # switch places or 0.0_1.0 and 0.01_0.99
 #print(key_order)
+key_order = [key for key in value_sums_mean_sorted]
+
+
 value_sums_mean_sorted = {key: value_sums_mean_sorted[key] for key in key_order}
 
 value_std = {index: [np.std(value_sums[index]['running_speed_returns_sum'], axis=0),

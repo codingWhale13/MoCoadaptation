@@ -8,6 +8,8 @@ import wandb
 import csv
 import numpy as np
 
+##### IMPORTANT if you want to use this testing you cannot use the render or video capture feature in the 'experiment_configs.py' #####
+
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
@@ -52,17 +54,20 @@ def read_morphology(path, checkpoint) -> list:
     return rows
 
 def run_tests(tests : int):
-    for seed_folder in os.listdir(path_to_folder):
-        seed_folder_path = os.path.join(path_to_folder, seed_folder)
-        for weight_folder in os.listdir(seed_folder_path):
-            weight_folder_path = os.path.join(seed_folder_path, weight_folder)
-            for model_folder in os.listdir(weight_folder_path):
-                model_folder_path = os.path.join(weight_folder_path, model_folder)
-                for j in range(tests):
-                    testing(model_folder_path, j)
+    for weight_folder in os.listdir(path_to_folder):
+        weight_folder_path = os.path.join(path_to_folder, weight_folder)
+        for model_folder in os.listdir(weight_folder_path):
+            model_folder_path = os.path.join(weight_folder_path, model_folder)
+            for j in range(tests):
+                testing(model_folder_path, j)
                 
                 
 def testing(model_path, count):
+    
+    #check if coadapt object exists, destroy it if it does and create a new one
+    if 'coadapt_test' in locals():
+        del coadapt_test
+    
     #Use to get last model checkpoint
     last_model_checkpoint_num = find_checkpoint(model_path)#-1 # checkpoint
     last_model_checkpoint = f'checkpoint_design_{last_model_checkpoint_num}.chk'
@@ -75,14 +80,16 @@ def testing(model_path, count):
     
     #Load morphology -> link lenghts
     morphology_number = str(last_model_checkpoint_num)  + ".csv"
-    model_file = read_morphology(path_to_folder, morphology_number) # read model csv file as list
+    model_file = read_morphology(model_path, morphology_number) # read model csv file as list
     link_lengths = np.array(model_file[1], dtype=float) # index link lengths from the file
     print(f"Link lenghts: {link_lengths}")
-     
+    
     folder = experiment_config['data_folder'] #MORL
-    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
-    file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num) + '_' + str(count)
-    #file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num) + '_' + str(count)
+    #rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+    model_name = model_path.split('/')[-1:]
+    model_name = str(model_name[0])
+    file_str = './' + folder + '/' + '__' + model_name + '_chkpnt_' + str(last_model_checkpoint_num) + '_run_' + str(count+1)
+    #file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num) + '_' + str(count) # ORIG
     experiment_config['data_folder_experiment'] = file_str # MORL
     
     #Create directory when not using video recording, turn off when you do, sloppy I know
