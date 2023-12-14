@@ -53,6 +53,7 @@ def read_morphology(path, checkpoint) -> list:
                     rows.append(row)
     return rows
 
+
 def run_tests(tests : int):
     for weight_folder in os.listdir(path_to_folder):
         weight_folder_path = os.path.join(path_to_folder, weight_folder)

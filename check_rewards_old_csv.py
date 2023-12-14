@@ -65,6 +65,7 @@ index = np.arange(len(key_order))
 
 bar1 = ax.bar(index - off_set , running_speed_sums, bar_width, label='Running Speed')
 bar2 = ax.bar(index + off_set , energy_cons_sums, bar_width, label='Energy Consumption')
+
 #DOES not work if the energy has smaller values than the running speed!
 #bar2 = ax.bar(index, [energy_cons_sums[value]-running_speed_sums[value] for value, _ in enumerate(energy_cons_sums)], bar_width, label='Energy Consumption', bottom=running_speed_sums) # less efficient with enumerate
 #bar2 = ax.bar(index, [energy - running_speed for energy, running_speed in zip(energy_cons_sums, running_speed_sums)], bar_width, label='Energy Consumption', bottom=running_speed_sums)
