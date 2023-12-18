@@ -201,31 +201,4 @@ for i, weight_category in enumerate(weight_categories):
 
 plt.tight_layout()
 
-# print(link_lengths_array[0, 0, :])
-# print(link_lengths_array.shape[2])
-
-# weight_categories = list(sorted_link_lengths.keys())
-
-# bar_width = 0.15
-# group_offset = 0.4
-# seed_colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Add more colors as needed
-
-# for i, weight_category in enumerate(weight_categories):
-#     fig, ax3 = plt.subplots(figsize=(12, 6))
-#     index = np.arange(link_lengths_array.shape[1])
-
-#     for j in range(link_lengths_array.shape[2]):
-#         ax3.bar(index + j * bar_width, link_lengths_array[i, :, j], bar_width, label=f'Seed_{j}', color=seed_colors[j])
-
-#     # Plot mean line across bars within each link index
-
-#     ax3.errorbar(index + group_offset, link_lengths_mean_array[i], yerr=link_lengths_std_array[i], color='orange', marker='o', linestyle='-', linewidth=2, label='Mean')
-
-#     ax3.set_ylabel('Link Length')
-#     ax3.set_xlabel('Link Index')
-#     ax3.set_title(f'Comparison of Link Lengths and Mean Link Lengths ({weight_category})')
-#     ax3.legend()
-
-# plt.tight_layout()
-
 plt.show()
