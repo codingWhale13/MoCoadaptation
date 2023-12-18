@@ -73,6 +73,7 @@ sorted_mean_value_sums = dict(sorted(value_sums_mean.items(), key=lambda item: c
 sorted_value_sums = dict(sorted(value_sums.items(), key=lambda item: convert_key_to_tuple(item[0])))
 sorted_link_lengths = dict(sorted(link_lengths.items(), key=lambda item: convert_key_to_tuple(item[0]))) #Sort link lenghts
 labels_links = list(sorted_link_lengths.keys())
+#print(sorted_link_lengths)
 
 # Sort the inner dictionaries based on keys
 # mean values
@@ -86,13 +87,36 @@ for key, inner_dict in sorted_value_sums.items():
 for key, inner_dict in sorted_link_lengths.items():
     sorted_link_lengths[key] = dict(sorted(inner_dict.items(), key=lambda item: convert_key_to_tuple(item[0]))) 
 
-#Calculate values
+#Calculate values to arrays
 reward_sums = np.array([(sorted_mean_value_sums[key1][key2]['running_speed_returns_sum_mean'], 
                                sorted_mean_value_sums[key1][key2]['energy_consumption_returns_sum_mean']) for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()])
 
 value_std = np.array([[np.std(sorted_value_sums[key1][key2]['running_speed_returns_sum'], axis=0),
                       np.std(sorted_value_sums[key1][key2]['energy_consumption_returns_sum'], axis=0)]
                      for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()])
+
+
+#print(sorted_link_lengths)
+
+#link_lengths_array = np.array([]) # Should be put to array and plotted as link lengths
+link_lengths_array = np.array([[weights[key] for key in weights] for weights in sorted_link_lengths.values()])
+link_lengths_mean_array = np.array([np.mean(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
+link_lengths_std_array = np.array([np.std(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
+#link_lengths_mean_array = np.repeat(link_lengths_mean_array, 5, axis=0)
+#link_lengths_std_array = np.repeat(link_lengths_std_array, 5, axis=0)
+
+#print(link_lengths_array)
+#print(link_lengths_mean_array)
+# print(f"link lenght dim: {len(link_lengths_array)}")
+# print(f"link lenght shape: {link_lengths_array.shape}") 
+#print(f"link lenght array slot: {link_lengths_array[9]}")
+#print(f"link lenght mean array slot: {link_lengths_mean_array[9]}")
+# print(f" shape of link lengths array : {link_lengths_array.shape}")
+# print(f" shape of link lengths mean array : {link_lengths_mean_array.shape}")
+
+#print(f" shape of link lengths std array : {link_lengths_std_array.shape}")
+#print(f" shape of link lengths mean array : {link_lengths_mean_array.shape}")
+
 
 #bar plot
 fig, ax = plt.subplots()
@@ -139,10 +163,11 @@ for index, (key1, key2) in enumerate([(key1, key2) for key1 in sorted_mean_value
         legend_added[weight_group] = True
     else:
         ax2.scatter(reward_sums[index, 0], reward_sums[index, 1], s=50, color=color_dict[weight_group])
-        
-# Annotate points on the scatter plot
-for index, txt in enumerate([key2 for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()]):
-    ax2.annotate(txt, (reward_sums[index, 0], reward_sums[index, 1]), textcoords="offset points", xytext=(0, 10), ha='center')
+
+#Add or dont add annotations per model        
+#annote the point to scatter plot
+#for index, txt in enumerate([key2 for key1 in sorted_mean_value_sums.keys() for key2 in sorted_mean_value_sums[key1].keys()]):
+#    ax2.annotate(txt, (reward_sums[index, 0], reward_sums[index, 1]), textcoords="offset points", xytext=(0, 10), ha='center')
 
 ax2.errorbar(reward_sums[:, 0], reward_sums[:, 1],
     xerr=[value_std[i][0] for i in range(len(value_std))],
@@ -150,27 +175,57 @@ ax2.errorbar(reward_sums[:, 0], reward_sums[:, 1],
     fmt='_', capsize=5, color='black', label='Error bars')
 
 ax2.legend()
+ 
+#link length plot
 
-#DOES NOT WORK PROPERLY
+weight_categories = list(sorted_link_lengths.keys())
 
-# test_amount = 5
-# num_figures = len(labels_links) // test_amount
+bar_width = 0.15
+group_offset = 0.4
+seed_colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Add more colors as needed
 
-# link_lengths_array_mean = np.array([])
-# for i in range(num_figures) : link_lengths_array_mean = np.append(link_lengths_array_mean,np.mean(link_lengths_array[0][0+test_amount*i:test_amount+test_amount*i], axis=0))
+for i, weight_category in enumerate(weight_categories):
+    fig, ax3 = plt.subplots(figsize=(12, 6))
+    index = np.arange(link_lengths_array.shape[2])
 
-# # Plotting link lengths and adding average link lengths as a red line
-# for fig_num in range(num_figures):
-#     plt.figure(figsize=(15, 12))  # Adjust the figure size as needed
-#     for i in range(test_amount):
-#         index = fig_num * test_amount + i
-#         if index < len(labels_links):
-#             plt.subplot(test_amount, 1, i + 1)
-#             #plt.bar(range(len(link_lengths_array[index])), link_lengths_array[i], label=labels_links[index])
-#             plt.axhline(y=link_lengths_array_mean[index], color='red', linestyle='--', label='Average')
-#             plt.xlabel('Link Index')
-#             plt.ylabel('Link Lengths')
-#             plt.title(f'Link Lengths for {labels_links[index]}', color='orange')
-#             plt.legend()
+    for j in range(link_lengths_array.shape[1]):
+        ax3.bar(index + j * bar_width, link_lengths_array[i, j, :], bar_width, label=f'Seed_{j}', color=seed_colors[j])
+
+    #ax3.plot(index + group_offset, link_lengths_mean_array[i], color='orange', marker='o', label='Mean')
+    ax3.errorbar(index + group_offset, link_lengths_mean_array[i], yerr=link_lengths_std_array[i], color='orange', marker='o', linestyle='-', linewidth=2, label='Error Bar')
+
+    ax3.set_ylabel('Link Length')
+    ax3.set_xlabel('Link Index')
+    ax3.set_title(f'Comparison of Link Lengths and Mean Link Lengths ({weight_category})')
+    ax3.legend()
+
+plt.tight_layout()
+
+# print(link_lengths_array[0, 0, :])
+# print(link_lengths_array.shape[2])
+
+# weight_categories = list(sorted_link_lengths.keys())
+
+# bar_width = 0.15
+# group_offset = 0.4
+# seed_colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Add more colors as needed
+
+# for i, weight_category in enumerate(weight_categories):
+#     fig, ax3 = plt.subplots(figsize=(12, 6))
+#     index = np.arange(link_lengths_array.shape[1])
+
+#     for j in range(link_lengths_array.shape[2]):
+#         ax3.bar(index + j * bar_width, link_lengths_array[i, :, j], bar_width, label=f'Seed_{j}', color=seed_colors[j])
+
+#     # Plot mean line across bars within each link index
+
+#     ax3.errorbar(index + group_offset, link_lengths_mean_array[i], yerr=link_lengths_std_array[i], color='orange', marker='o', linestyle='-', linewidth=2, label='Mean')
+
+#     ax3.set_ylabel('Link Length')
+#     ax3.set_xlabel('Link Index')
+#     ax3.set_title(f'Comparison of Link Lengths and Mean Link Lengths ({weight_category})')
+#     ax3.legend()
+
+# plt.tight_layout()
 
 plt.show()
