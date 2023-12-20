@@ -8,12 +8,9 @@ import torch
 import numpy as np
 import random
 
-#def main(config): # ORIG'
-def main(config_name, weight_index): # MORL
-
+def main(config_name, weight_index):
     # Create foldr in which to save results
-    #folder = config['data_folder'] #ORIG
-    folder = config_name['data_folder'] #MORL
+    folder = config_name['data_folder']
     #generate random hash string - unique identifier if we startexi
     # multiple experiments at the same time
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
@@ -21,22 +18,14 @@ def main(config_name, weight_index): # MORL
         file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + str(config_name['weights'][weight_index]) + '_' + str(seed)# add seed to filename
     else:
         file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + str(config_name['weights'][weight_index]) # do not add the seed to filename
-    #config['data_folder_experiment'] = file_str # ORIG
-    config_name['data_folder_experiment'] = file_str # MORL
-
+    config_name['data_folder_experiment'] = file_str
     # Create experiment folder
     if not os.path.exists(file_str):
       os.makedirs(file_str)
-
     # Store config
-    #with open(os.path.join(file_str, 'config.json'), 'w') as fd:
-    #        fd.write(json.dumps(config,indent=2))                  #ORIG
-    
     with open(os.path.join(file_str, 'config.json'), 'w') as fd:
-            fd.write(json.dumps(config_name,indent=2))                  #MORL
-    
-    #co = coadapt.Coadaptation(config) # ORIG 
-    co = coadapt.Coadaptation(config_name, weight_index, project_name, run_name) # MORL
+            fd.write(json.dumps(config_name,indent=2))
+    co = coadapt.Coadaptation(config_name, weight_index, project_name, run_name)
     # Set custom seed
     if seed:
         random.seed(seed)
@@ -45,10 +34,8 @@ def main(config_name, weight_index): # MORL
         print(f"Custom seed set: {seed}")
     else:
         print(f"Custom seed set not set, using random seed")
-    #run coadapt
     co.run()
     wandb.finish()
-
 
 
 if __name__ == "__main__":
@@ -60,7 +47,6 @@ if __name__ == "__main__":
         seed = int(sys.argv[5])
         print(run_name)
         print(project_name)
-        #Later on needs to changed to give you a option to give trackable names for wandb tracking
         print(f"index w : {weight_index}")
         print(config_name['weights'][weight_index])
     elif len(sys.argv) > 4:
@@ -71,7 +57,6 @@ if __name__ == "__main__":
         seed = False
         print(run_name)
         print(project_name)
-        #Later on needs to changed to give you a option to give trackable names for wandb tracking
         print(f"index w : {weight_index}")
         print(config_name['weights'][weight_index]) 
     else:
@@ -81,4 +66,4 @@ if __name__ == "__main__":
         project_name="coadapt-save-testing"
         run_name="default-run-weight" + f"-{config_name['weights'][weight_index]}"
         print(config_name['weights'][weight_index])
-    main(config_name, weight_index) # MORL
+    main(config_name, weight_index)

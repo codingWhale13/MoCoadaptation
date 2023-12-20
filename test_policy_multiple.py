@@ -13,10 +13,8 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/' 
-
+path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/test' 
 newline=''
-
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here
 project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
@@ -36,6 +34,7 @@ def find_checkpoint(path_to_directory):
         return max(checkpoints)
     else:
         return None
+    
     
 def read_morphology(path, checkpoint) -> list:
     
@@ -59,6 +58,7 @@ def run_tests(tests : int):
         weight_folder_path = os.path.join(path_to_folder, weight_folder)
         for model_folder in os.listdir(weight_folder_path):
             model_folder_path = os.path.join(weight_folder_path, model_folder)
+            print(f"***Running tests for model: {model_folder_path} ***")
             for j in range(tests):
                 testing(model_folder_path, j)
                 
