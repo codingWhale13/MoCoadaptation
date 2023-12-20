@@ -3,6 +3,7 @@ from colorsys import hls_to_rgb
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import plotly.graph_objects as go
 
 ### CANNOT BE USED WITH OLD CSV FILES ###
 ### NEW VERSION ###
@@ -75,6 +76,7 @@ def sort_dictionaries(path):
                                 value_sums[directoryname][directory_keyname] = {'running_speed_returns_sum': total_run_spd_reward , 'energy_consumption_returns_sum': total_energy_cons_reward}
     return value_sums, value_sums_mean, link_lengths
 
+
 if __name__ == "__main__":
     value_sums, value_sums_mean, link_lengths = sort_dictionaries(path)
     # Sort dictionaries based on keys
@@ -107,6 +109,7 @@ if __name__ == "__main__":
     link_lengths_mean_array = np.array([np.mean(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
     link_lengths_std_array = np.array([np.std(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
 
+  
     ######bar plot######
     fig, ax = plt.subplots()
     bar_width = 0.3
@@ -175,27 +178,97 @@ if __name__ == "__main__":
     
     #####link length plot#####
 
+    #####OPTION 1 BARPLOT ######
+
+    #weight_categories = list(sorted_link_lengths.keys())
+
+    # bar_width = 0.15
+    # group_offset = 0.4
+    #seed_colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Add more colors as needed
+
+    # for i, weight_category in enumerate(weight_categories):
+    #     fig, ax3 = plt.subplots(figsize=(12, 6))
+    #     index = np.arange(link_lengths_array.shape[2])
+
+    #     for j in range(link_lengths_array.shape[1]):
+    #         ax3.bar(index + j * bar_width, link_lengths_array[i, j, :], bar_width, label=f'Seed_{j}', color=seed_colors[j])
+
+    #     #ax3.plot(index + group_offset, link_lengths_mean_array[i], color='orange', marker='o', label='Mean')
+    #     ax3.errorbar(index + group_offset, link_lengths_mean_array[i], yerr=link_lengths_std_array[i], color='orange', marker='o', linestyle='-', linewidth=2, label='Error Bar')
+
+    #     ax3.set_ylabel('Link Length')
+    #     ax3.set_xlabel('Link Index')
+    #     ax3.set_title(f'Comparison of Link Lengths and Mean Link Lengths ({weight_category})')
+    #     ax3.legend()
+
+    # plt.tight_layout()
+    
+    #####OPTION 2 PLOTLY ######
+
     weight_categories = list(sorted_link_lengths.keys())
+    #print(weight_categories)
+    distinct_fig_colors = get_distinct_colors(link_lengths_array.shape[1]) # bar plot color
+    #distinct_error_colors = get_distinct_colors(link_lengths_array.shape[0])
+    distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
+    
+    fig = go.Figure()
 
-    bar_width = 0.15
-    group_offset = 0.4
-    seed_colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Add more colors as needed
-
+    # Add bar plots for each weight category
     for i, weight_category in enumerate(weight_categories):
-        fig, ax3 = plt.subplots(figsize=(12, 6))
         index = np.arange(link_lengths_array.shape[2])
 
+        # barplots
+        # for j in range(link_lengths_array.shape[1]):
+        #     fig.add_trace(go.Bar(
+        #         x=index + j * bar_width,
+        #         y=link_lengths_array[i, j, :],
+        #         name=f'Seed_{j}',
+        #         marker_color=distinct_fig_colors[j]  # Use marker_color instead of marker=dict(color=...)
+        #     ))
+
+        # MEAN AND STD PLOT
+        # color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+        # fig.add_trace(go.Scatter(
+        #     x=index + group_offset,
+        #     y=link_lengths_mean_array[i],
+        #     mode='markers+lines',
+        #     name=weight_categories[i],#'Mean',
+        #     marker=dict(color=color),#dict(color='orange'),
+        #     error_y=dict(
+        #         type='data',
+        #         array=link_lengths_std_array[i],
+        #         visible=True,
+        #         color=color#'orange'
+        #     )
+        # ))
+        
+        # INDIVIDUAL SEEDS PLOTTED
+        color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
         for j in range(link_lengths_array.shape[1]):
-            ax3.bar(index + j * bar_width, link_lengths_array[i, j, :], bar_width, label=f'Seed_{j}', color=seed_colors[j])
+            fig.add_trace(go.Scatter(
+                x=index + group_offset,
+                y=link_lengths_array[i, j, :],
+                mode='markers+lines',
+                name=str(weight_categories[i])+"_"+str(j+1),#'Mean',
+                marker=dict(color=color),#dict(color='orange'),
+                # error_y=dict(
+                #     type='data',
+                #     array=link_lengths_std_array[i],
+                #     visible=True,
+                #     color=color#'orange'
+                # )
+            ))
+        
+    fig.update_layout(
+        barmode='group',
+        xaxis=dict(title='Link Index'),
+        yaxis=dict(title='Link Length'),
+        title='Comparison of Link Lengths and Mean Link Lengths',
+        showlegend=True
+    )
 
-        #ax3.plot(index + group_offset, link_lengths_mean_array[i], color='orange', marker='o', label='Mean')
-        ax3.errorbar(index + group_offset, link_lengths_mean_array[i], yerr=link_lengths_std_array[i], color='orange', marker='o', linestyle='-', linewidth=2, label='Error Bar')
-
-        ax3.set_ylabel('Link Length')
-        ax3.set_xlabel('Link Index')
-        ax3.set_title(f'Comparison of Link Lengths and Mean Link Lengths ({weight_category})')
-        ax3.legend()
-
-    plt.tight_layout()
+    # Show the plot
+    fig.show()
+    
 
     plt.show()
