@@ -11,8 +11,8 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/0.8_0.2/Thu_Dec__7_20:56:48_2023__878baf28[0.8, 0.2]' 
-
+path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/1.0_0.0/Mon_Dec_11_20:22:29_2023__057faef6[1.0, 0.0]_5' 
+seed = path_to_folder[-1]
 newline=''
 
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
     #Use to get last model checkpoint
     last_model_checkpoint_num = find_checkpoint(path_to_folder)#-1 # checkpoint
+    print(last_model_checkpoint_num)
     last_model_checkpoint = f'checkpoint_design_{last_model_checkpoint_num}.chk'
     print("path_to_folder:", path_to_folder)
     print("last_model_checkpoint_num:", last_model_checkpoint_num)
@@ -73,8 +74,10 @@ if __name__ == "__main__":
     print(f"Link lenghts: {link_lengths}")
     
     folder = experiment_config['data_folder'] #MORL
-    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
-    file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num)
+    #rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+    model_name = path_to_folder.split('/')[-1:]
+    model_name = str(model_name[0])
+    file_str = './' + folder + '/' + '__' + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
     experiment_config['data_folder_experiment'] = file_str # MORL
 
     #Create directory when not using video recording, turn off when you do, sloppy I know
