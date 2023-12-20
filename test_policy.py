@@ -20,6 +20,7 @@ weight_index = 5 # dummy value for creating the class, we dont update the networ
 project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
 run_name = "test" #"0, 1, 5"#"1, 0, 7"
 
+
 def find_checkpoint(path_to_directory):
     """ Find the checkpoint for the model
 
@@ -34,6 +35,7 @@ def find_checkpoint(path_to_directory):
         return max(checkpoints)
     else:
         return None
+    
     
 def read_morphology(path, checkpoint) -> list:
     
@@ -50,6 +52,7 @@ def read_morphology(path, checkpoint) -> list:
                 for row in reader:
                     rows.append(row)
     return rows
+
 
 if __name__ == "__main__": 
 
@@ -84,9 +87,7 @@ if __name__ == "__main__":
     coadapt_test.load_networks(last_model_checkpoint)
     file_path = coadapt_test._config['data_folder_experiment'] #filepath
     n = 30 #iterations
-    #print(coadapt_test._env.get_current_design())
     coadapt_test._env.set_new_design(link_lengths) # Set new link lenghts
-    #print(coadapt_test._env.get_current_design())
     with open(
             os.path.join(file_path,
                 'episodic_rewards_run_{}.csv'.format(run_name)
@@ -98,11 +99,6 @@ if __name__ == "__main__":
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
             coadapt_test.execute_policy()
-            
-            # Quick note, it would be more efficient to have the results within the link lenghts themselves within results and write everything on 3 rows
-            # but that would make the previous test run files obsolete since you couldnt read the easily in the same way. This should be the way things are done later on.
-            #cwriter.writerow([coadapt_test._data_reward_1[0], coadapt_test._data_reward_2[0]]) # original
-            
             #append iteration results to lists
             running_speed.append(coadapt_test._data_reward_1[0])
             energy_saving.append(coadapt_test._data_reward_2[0])
