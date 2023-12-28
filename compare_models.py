@@ -113,8 +113,11 @@ if __name__ == "__main__":
     link_lengths_mean_array = np.array([np.mean(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
     link_lengths_std_array = np.array([np.std(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
     
+    print(sorted_link_lengths)
+    print("link length array: ")
+    print(link_lengths_array)
     
-    ######bar plot######
+    ######bar plot######  
     fig, ax = plt.subplots()
     bar_width = 0.3
     off_set = 0.15
@@ -206,131 +209,159 @@ if __name__ == "__main__":
 
     # plt.tight_layout()
     
-    #####OPTION 2 PLOTLY ######
+    # #####OPTION 2 PLOTLY ######
     
-    ###### PLOT MEAN ######
+    # ###### PLOT MEAN ######
     
-    weight_categories = list(sorted_link_lengths.keys())
-    #print(weight_categories)
-    distinct_fig_colors = get_distinct_colors(link_lengths_array.shape[1]) # bar plot color
-    #distinct_error_colors = get_distinct_colors(link_lengths_array.shape[0])
-    distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
+    # weight_categories = list(sorted_link_lengths.keys())
+    # #print(weight_categories)
+    # distinct_fig_colors = get_distinct_colors(link_lengths_array.shape[1]) # bar plot color
+    # #distinct_error_colors = get_distinct_colors(link_lengths_array.shape[0])
+    # distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
     
-    fig1 = go.Figure()
-    # Add bar plots for each weight category
-    for i, weight_category in enumerate(weight_categories):
-        index = np.arange(link_lengths_array.shape[2])
+    # fig1 = go.Figure()
+    # # Add bar plots for each weight category
+    # for i, weight_category in enumerate(weight_categories):
+    #     index = np.arange(link_lengths_array.shape[2])
 
-        ## MEAN AND STD PLOT
-        color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
-        fig1.add_trace(go.Scatter(
-            x=index + group_offset,
-            y=link_lengths_mean_array[i],
-            mode='markers+lines',
-            name=weight_categories[i],#'Mean',
-            marker=dict(color=color),#dict(color='orange'),
-            error_y=dict(
-                type='data',
-                array=link_lengths_std_array[i],
-                visible=True,
-                color=color#'orange'
-            )
-        ))
+    #     ## MEAN AND STD PLOT
+    #     color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+    #     fig1.add_trace(go.Scatter(
+    #         x=index + group_offset,
+    #         y=link_lengths_mean_array[i],
+    #         mode='markers+lines',
+    #         name=weight_categories[i],#'Mean',
+    #         marker=dict(color=color),#dict(color='orange'),
+    #         error_y=dict(
+    #             type='data',
+    #             array=link_lengths_std_array[i],
+    #             visible=True,
+    #             color=color#'orange'
+    #         )
+    #     ))
         
-    fig1.update_layout(
-        barmode='group',
-        xaxis=dict(title='Link Index'),
-        yaxis=dict(title='Link Length'),
-        title='Comparison of Mean Link Lengths',#'Comparison of Mean Link Lengths',
-        showlegend=True
-    )
-    fig1.show()
+    # fig1.update_layout(
+    #     barmode='group',
+    #     xaxis=dict(title='Link Index'),
+    #     yaxis=dict(title='Link Length'),
+    #     title='Comparison of Mean Link Lengths',#'Comparison of Mean Link Lengths',
+    #     showlegend=True
+    # )
+    # fig1.show()
 
-    ###### PLOT ALL ######
-    figplo = go.Figure()
-    # Add bar plots for each weight category
-    for i, weight_category in enumerate(weight_categories):
-        index = np.arange(link_lengths_array.shape[2])
-        # barplots
-        # for j in range(link_lengths_array.shape[1]):
-        #     figplo.add_trace(go.Bar(
-        #         x=index + j * bar_width,
-        #         y=link_lengths_array[i, j, :],
-        #         name=f'Seed_{j}',
-        #         marker_color=distinct_fig_colors[j]  # Use marker_color instead of marker=dict(color=...)
-        #     ))
+    # ###### PLOT ALL ######
+    # figplo = go.Figure()
+    # # Add bar plots for each weight category
+    # for i, weight_category in enumerate(weight_categories):
+    #     index = np.arange(link_lengths_array.shape[2])
+    #     # barplots
+    #     # for j in range(link_lengths_array.shape[1]):
+    #     #     figplo.add_trace(go.Bar(
+    #     #         x=index + j * bar_width,
+    #     #         y=link_lengths_array[i, j, :],
+    #     #         name=f'Seed_{j}',
+    #     #         marker_color=distinct_fig_colors[j]  # Use marker_color instead of marker=dict(color=...)
+    #     #     ))
 
-        ## MEAN AND STD PLOT
-        # color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
-        # figplo.add_trace(go.Scatter(
-        #     x=index + group_offset,
-        #     y=link_lengths_mean_array[i],
-        #     mode='markers+lines',
-        #     name=weight_categories[i],#'Mean',
-        #     marker=dict(color=color),#dict(color='orange'),
-        #     error_y=dict(
-        #         type='data',
-        #         array=link_lengths_std_array[i],
-        #         visible=True,
-        #         color=color#'orange'
-        #     )
-        # ))
+    #     ## MEAN AND STD PLOT
+    #     # color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+    #     # figplo.add_trace(go.Scatter(
+    #     #     x=index + group_offset,
+    #     #     y=link_lengths_mean_array[i],
+    #     #     mode='markers+lines',
+    #     #     name=weight_categories[i],#'Mean',
+    #     #     marker=dict(color=color),#dict(color='orange'),
+    #     #     error_y=dict(
+    #     #         type='data',
+    #     #         array=link_lengths_std_array[i],
+    #     #         visible=True,
+    #     #         color=color#'orange'
+    #     #     )
+    #     # ))
         
-        # INDIVIDUAL SEEDS PLOTTED
-        color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
-        for j in range(link_lengths_array.shape[1]):
-            figplo.add_trace(go.Scatter(
-                x=index + group_offset,
-                y=link_lengths_array[i, j, :],
-                mode='markers+lines',
-                name=str(weight_categories[i])+"_"+str(j+1),#'Mean',
-                marker=dict(color=color),#dict(color='orange'),
-                # error_y=dict(
-                #     type='data',
-                #     array=link_lengths_std_array[i],
-                #     visible=True,
-                #     color=color#'orange'
-                # )
-            ))
+    #     # INDIVIDUAL SEEDS PLOTTED
+    #     color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+    #     for j in range(link_lengths_array.shape[1]):
+    #         figplo.add_trace(go.Scatter(
+    #             x=index + group_offset,
+    #             y=link_lengths_array[i, j, :],
+    #             mode='markers+lines',
+    #             name=str(weight_categories[i])+"_"+str(j+1),#'Mean',
+    #             marker=dict(color=color),#dict(color='orange'),
+    #             # error_y=dict(
+    #             #     type='data',
+    #             #     array=link_lengths_std_array[i],
+    #             #     visible=True,
+    #             #     color=color#'orange'
+    #             # )
+    #         ))
         
-    figplo.update_layout(
-        barmode='group',
-        xaxis=dict(title='Link Index'),
-        yaxis=dict(title='Link Length'),
-        title='Comparison of Link Lengths',#'Comparison of Mean Link Lengths',
-        showlegend=True
-    )
+    # figplo.update_layout(
+    #     barmode='group',
+    #     xaxis=dict(title='Link Index'),
+    #     yaxis=dict(title='Link Length'),
+    #     title='Comparison of Link Lengths',#'Comparison of Mean Link Lengths',
+    #     showlegend=True
+    # )
 
+    # ##### PLOT IND LINK LENGTHS #####
+    
+    # figplo.show()
+    # weight_categories = list(sorted_link_lengths.keys())
+    # distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
+
+    # for j in range(link_lengths_array.shape[2]):
+    #     fig = go.Figure()
+    #     index = np.arange(link_lengths_array.shape[0])+1
+    #     xticklabels = np.arange(link_lengths_array.shape[1])+1#sorted(weight_categories, key=lambda x: tuple(map(float, x.split('_'))))
+        
+    #     for i, weight_category in enumerate(weight_categories):
+    #         color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+    #         #print(i)
+    #         fig.add_trace(go.Scatter(
+    #                 x=index + group_offset,
+    #                 y=link_lengths_array[i, :, j],
+    #                 mode='markers+lines',
+    #                 name=f'{weight_category} Link {j + 1}',
+    #                 marker=dict(color=color),
+    #                 line=dict(color=color)
+    #         ))
+        
+    #     fig.update_layout(
+    #         xaxis=dict(title='Seed', tickmode='array', tickvals=index + group_offset, ticktext=xticklabels),
+    #         yaxis=dict(title='Link Length'),
+    #         title=f'Comparison of Link Lengths for Link {j + 1}',
+    #         showlegend=True
+    #     )
+    #     fig.show()
+    
     ##### PLOT IND LINK LENGTHS #####
-    
-    figplo.show()
+        
     weight_categories = list(sorted_link_lengths.keys())
     distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
 
     for j in range(link_lengths_array.shape[2]):
         fig = go.Figure()
         index = np.arange(link_lengths_array.shape[0])+1
-        xticklabels = np.arange(link_lengths_array.shape[1])+1#sorted(weight_categories, key=lambda x: tuple(map(float, x.split('_'))))
-        
+        xticklabels = np.arange(link_lengths_array.shape[1])+1
         for i, weight_category in enumerate(weight_categories):
+                
             color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
-            #print(i)
             fig.add_trace(go.Scatter(
-                    x=index + group_offset,
-                    y=link_lengths_array[i, :, j],
-                    mode='markers+lines',
-                    name=f'{weight_category} Link {j + 1}',
-                    marker=dict(color=color),
-                    line=dict(color=color)
+                y=index, #+ group_offset,
+                x=link_lengths_array[i, :, j],
+                mode='markers+lines',
+                name=f'Weight : {weight_category} ',
+                marker=dict(color=color),
+                line=dict(color=color)
             ))
-        
-        fig.update_layout(
-            xaxis=dict(title='Seed', tickmode='array', tickvals=index + group_offset, ticktext=xticklabels),
-            yaxis=dict(title='Link Length'),
-            title=f'Comparison of Link Lengths for Link {j + 1}',
-            showlegend=True
-        )
+                
+            fig.update_layout(
+                xaxis=dict(title='Link lenght', tickmode='array', ticktext=xticklabels),
+                yaxis=dict(title='Seed', tickvals=index),
+                title=f'Comparison of Link Lengths for Link {j + 1}',
+                showlegend=True
+            )
         fig.show()
-    
     
     plt.show()
