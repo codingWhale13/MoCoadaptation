@@ -11,8 +11,14 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
+<<<<<<< Updated upstream
 path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/0.8_0.2/Thu_Dec__7_20:56:48_2023__878baf28[0.8, 0.2]' 
 
+=======
+path_to_folder = '/home/oskar/Thesis/inter/models/results_with_rescaling/set_seed/0.7_0.3/Fri_Dec_29_22:47:42_2023__1186cf06[0.7, 0.3]_1' 
+
+seed = path_to_folder[-1]
+>>>>>>> Stashed changes
 newline=''
 
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
@@ -71,7 +77,13 @@ if __name__ == "__main__":
     
     folder = experiment_config['data_folder'] #MORL
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+<<<<<<< Updated upstream
     file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num)
+=======
+    model_name = path_to_folder.split('/')[-1:]
+    model_name = str(model_name[0])
+    file_str = './' + folder + '/' + '__' + rand_id + '_' + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
+>>>>>>> Stashed changes
     experiment_config['data_folder_experiment'] = file_str # MORL
 
     #Create directory when not using video recording, turn off when you do, sloppy I know

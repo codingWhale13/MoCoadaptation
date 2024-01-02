@@ -237,7 +237,7 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
     self.robot = HalfCheetah(design)
     WalkerBaseBulletEnv.__init__(self, self.robot, render)
     self.observation_space = spaces.Box(-np.inf, np.inf, shape=[17], dtype=np.float32)
-
+    self.reward_dim = 2
   def _isDone(self):
     return False
 
