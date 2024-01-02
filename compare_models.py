@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 ### CANNOT BE USED WITH OLD CSV FILES ###
 ### NEW VERSION ###
 
-path='/home/oskar/Thesis/model_comparison_results' # paths need to be correct
+path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
 newline=''
 
 
@@ -113,15 +113,15 @@ if __name__ == "__main__":
     link_lengths_mean_array = np.array([np.mean(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
     link_lengths_std_array = np.array([np.std(list(weights.values()), axis=0) for weights in sorted_link_lengths.values()])
     
-    print(sorted_link_lengths)
-    print("link length array: ")
-    print(link_lengths_array)
+    # print(sorted_link_lengths)
+    # print("link length array: ")
+    # print(link_lengths_array)
     
-    print(f"mean array: {link_lengths_mean_array}")
-    print(f"std array: {link_lengths_std_array}")
+    # print(f"mean array: {link_lengths_mean_array}")
+    # print(f"std array: {link_lengths_std_array}")
     
-    print(link_lengths_mean_array.shape)
-    print(link_lengths_std_array.shape)
+    # print(link_lengths_mean_array.shape)
+    # print(link_lengths_std_array.shape)
     
     ######bar plot######  
     fig, ax = plt.subplots()
@@ -158,8 +158,10 @@ if __name__ == "__main__":
     unique_weight_groups = sorted(set(sorted_mean_value_sums.keys()), key=convert_key_to_tuple) #sorted(set([key1 for key1 in sorted_mean_value_sums.keys()]))
     #print(unique_weight_groups)
     #color_dict = {weight_group: plt.get_cmap('magma')(i / len(unique_weight_groups)) for i, weight_group in enumerate(unique_weight_groups)}
-    distinct_colors = get_distinct_colors(len(unique_weight_groups)) # works better to get colors more apart from each other
-    adjusted_color_dict = {weight_group: distinct_colors[i] for i, weight_group in enumerate(unique_weight_groups)}
+    
+    #distinct_colors = get_distinct_colors(len(unique_weight_groups)) # works better to get colors more apart from each other
+    #adjusted_color_dict = {weight_group: distinct_colors[i] for i, weight_group in enumerate(unique_weight_groups)}
+    adjusted_color_dict = {weight_group: plt.get_cmap('plasma')(i / len(unique_weight_groups)) for i, weight_group in enumerate(unique_weight_groups)}
     legend_added = {} # keep track of added legends for weight groups
 
     #shapes of markers
@@ -191,7 +193,7 @@ if __name__ == "__main__":
     ##### link length plots #####
     
     weight_categories = list(sorted_link_lengths.keys())
-    distinct_error_colors = list(plt.get_cmap('viridis_r')(i / len(weight_categories)) for i, _ in enumerate(weight_categories))
+    distinct_error_colors = list(plt.get_cmap('plasma')(i / len(weight_categories)) for i, _ in enumerate(weight_categories)) # viridis_r
 
     for j in range(link_lengths_array.shape[2]):
         fig = go.Figure()
@@ -202,6 +204,7 @@ if __name__ == "__main__":
             
             #for k, value in (link_lengths_array[i, :, j]):
             color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+            
             # MEAN AND STANDARD DEVIATION
             # fig.add_trace(go.Scatter(
             #         x=[weight_categories[i]],#weight_categories, #+ group_offset,
@@ -215,6 +218,7 @@ if __name__ == "__main__":
             #         visible=True,
             #         color=color)
             #     ))
+            
             # REGULAR VALUES
             for k, y_value in enumerate(link_lengths_array[i, :, j]):
                 fig.add_trace(go.Scatter(

@@ -138,6 +138,8 @@ class Coadaptation(object):
         #self._data_rewards = [] # SORL ORIGINAL # for MORL we need two
         self._data_reward_1 = []
         self._data_reward_2 = []
+        self._states = [] # Needed for checking observations
+        self._actions = [] # Needed for checking actions
         self._episode_counter = 0
 
 
@@ -214,9 +216,12 @@ class Coadaptation(object):
         state = self._env.reset()
         done = False
         reward_ep = np.array([0, 0]) #SORL #reward_ep = 0.0 # We have two goals right now -> changes
-        reward_original = np.array([0, 0])# SORL #reward_original = 0.0  # -> same
+        #reward_original = np.array([0, 0])# SORL #reward_original = 0.0  # -> same
         action_cost = 0.0
         nmbr_of_steps = 0
+        #states_arr = np.empty((0, 23)) # state saving
+        #actions_arr = np.empty((0 ,6)) # action saving
+        
 
         if self._episode_counter < self._config['initial_episodes']:
             policy_gpu_ind = self._rl_alg_class.get_policy_network(self._networks['population'])
@@ -234,6 +239,10 @@ class Coadaptation(object):
             nmbr_of_steps += 1
             action, _ = self._policy_cpu.get_action(state, deterministic=True)
             new_state, reward, done, info = self._env.step(action)
+            #print(action.shape)
+            #print(state.shape)
+            #states_arr= np.vstack((states_arr, state)) # needed for saving the states #.append(action) #
+            #actions_arr = np.vstack((actions_arr, action)) # needed for saving the actions # .append(state)
             action_cost += info['orig_action_cost']
             #reward_ep += float(reward) #NOT WORKING  #SORL # changes need to be made here to convert scalar rewards to tuple or np.array
             reward_ep = np.add(reward_ep, reward, casting='unsafe') # MORL
@@ -245,8 +254,9 @@ class Coadaptation(object):
         #self._data_rewards.append(reward_ep) # SORL # I think needs to be changed. The rewards should be two categories
         self._data_reward_1.append(reward_ep[0])
         self._data_reward_2.append(reward_ep[1])
+        #self._states.append(states_arr) # needed for saving the states
+        #self._actions.append(actions_arr) # needed for saving the actions
         #saved to wandb the episodic reward
-        #reward_arr = np.array(self._data_design_type, dtype=float)
         wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]})
         
         

@@ -13,7 +13,9 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/test' 
+#change <insert> to priori or inter based what you use or rename the folders '/Thesis/<insert>/ rest of the path
+
+path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/test' # in path_to_folder have models in folders per each unique weight
 newline=''
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here

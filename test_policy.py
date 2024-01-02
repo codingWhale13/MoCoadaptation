@@ -11,7 +11,7 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/1.0_0.0/Mon_Dec_11_20:22:29_2023__057faef6[1.0, 0.0]_5' 
+path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/0.99_0.01/Sat_Dec_23_15:02:39_2023__fda64079[0.99, 0.01]_4' 
 seed = path_to_folder[-1]
 newline=''
 
@@ -98,17 +98,27 @@ if __name__ == "__main__":
         #simulate the model
         running_speed = []
         energy_saving = []
+        #states = []
+        #actions = []
+        
         for i in range(n):
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
             coadapt_test.execute_policy()
+            #print(coadapt_test._states)
+            #print()
+            #print(coadapt_test._actions)
             #append iteration results to lists
             running_speed.append(coadapt_test._data_reward_1[0])
             energy_saving.append(coadapt_test._data_reward_2[0])
+            #states.append(coadapt_test._states[0])
+            #actions.append(coadapt_test._actions[0])
+            #cwriter.writerow(states)
+            #cwriter.writerow(actions)
             print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
         #save results to csv file
-        cwriter.writerow(link_lengths)
-        cwriter.writerow(running_speed)
-        cwriter.writerow(energy_saving)
+        #cwriter.writerow(link_lengths)
+        #cwriter.writerow(running_speed)
+        #cwriter.writerow(energy_saving)
         
     wandb.finish()
