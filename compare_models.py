@@ -230,7 +230,7 @@ if __name__ == "__main__":
                     line=dict(color=color)
                 ))
             
-            #print(f"y : {link_lengths_array[i, :, j]} , weight_category: {weight_category}")
+            print(f"y : {link_lengths_array[i, :, j]} , weight_category: {weight_category}")
                 
             fig.update_layout(
                         yaxis=dict(title='Link lenght',tickvals=index_link_length),
