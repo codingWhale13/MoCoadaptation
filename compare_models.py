@@ -222,63 +222,63 @@ if __name__ == "__main__":
     
     ##### link length plots #####
     
-    # weight_categories = list(sorted_link_lengths.keys())
-    # distinct_error_colors = list(plt.get_cmap('plasma')(i / len(weight_categories)) for i, _ in enumerate(weight_categories)) # viridis_r
+    weight_categories = list(sorted_link_lengths.keys())
+    distinct_error_colors = list(plt.get_cmap('plasma')(i / len(weight_categories)) for i, _ in enumerate(weight_categories)) # viridis_r
 
-    # for j in range(link_lengths_array.shape[2]):
-    #     fig = go.Figure()
-    #     figm = go.Figure()
-    #     index_link_length = np.arange(link_lengths_array.shape[0])
-    #     index_weigths = np.arange(link_lengths_array.shape[0])
-    #     #xticklabels = np.arange(link_lengths_array.shape[1])+1
-    #     for i, weight_category in enumerate(weight_categories):
+    for j in range(link_lengths_array.shape[2]):
+        fig = go.Figure()
+        figm = go.Figure()
+        index_link_length = np.arange(link_lengths_array.shape[0])
+        index_weigths = np.arange(link_lengths_array.shape[0])
+        #xticklabels = np.arange(link_lengths_array.shape[1])+1
+        for i, weight_category in enumerate(weight_categories):
             
-    #         #for k, value in (link_lengths_array[i, :, j]):
-    #         color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
+            #for k, value in (link_lengths_array[i, :, j]):
+            color = f'rgb({distinct_error_colors[i][0]*255},{distinct_error_colors[i][1]*255},{distinct_error_colors[i][2]*255})'
             
-    #         # MEAN AND STANDARD DEVIATION
-    #         figm.add_trace(go.Scatter(
-    #                 x=[weight_categories[i]],#weight_categories, #+ group_offset,
-    #                 y=[link_lengths_mean_array[i, j]],
-    #                 mode='markers+lines',
-    #                 name=f'Weight : {weight_category} ',
-    #                 marker=dict(color=color),
-    #                 error_y=dict(
-    #                 type='data',
-    #                 array=[link_lengths_std_array[i, j]],
-    #                 visible=True,
-    #                 color=color)
-    #             ))
-    #         figm.update_layout(
-    #                     yaxis=dict(title='Link lenght',tickvals=index_link_length),
-    #                     xaxis=dict(title='weights', tickvals=index_weigths, ticktext=weight_categories),
-    #                     title=f'Comparison of Mean Link Lengths for Link {j + 1}',
-    #                     showlegend=True
-    #         )
+            # MEAN AND STANDARD DEVIATION
+            figm.add_trace(go.Scatter(
+                    x=[weight_categories[i]],#weight_categories, #+ group_offset,
+                    y=[link_lengths_mean_array[i, j]],
+                    mode='markers+lines',
+                    name=f'Weight : {weight_category} ',
+                    marker=dict(color=color),
+                    error_y=dict(
+                    type='data',
+                    array=[link_lengths_std_array[i, j]],
+                    visible=True,
+                    color=color)
+                ))
+            figm.update_layout(
+                        yaxis=dict(title='Link lenght',tickvals=index_link_length),
+                        xaxis=dict(title='weights', tickvals=index_weigths, ticktext=weight_categories),
+                        title=f'Comparison of Mean Link Lengths for Link {j + 1}',
+                        showlegend=True
+            )
             
             
-    #         # REGULAR VALUES
-    #         for k, y_value in enumerate(link_lengths_array[i, :, j]):
-    #             fig.add_trace(go.Scatter(
-    #                 x=[weight_categories[i]],  # Use a list with a single value
-    #                 y=[y_value],
-    #                 mode='markers+lines',
-    #                 name=f'Weight : {weight_category}',
-    #                 marker=dict(color=color),
-    #                 line=dict(color=color)
-    #             ))
+            # REGULAR VALUES
+            for k, y_value in enumerate(link_lengths_array[i, :, j]):
+                fig.add_trace(go.Scatter(
+                    x=[weight_categories[i]],  # Use a list with a single value
+                    y=[y_value],
+                    mode='markers+lines',
+                    name=f'Weight : {weight_category}',
+                    marker=dict(color=color),
+                    line=dict(color=color)
+                ))
             
-    #         #print(f"y : {link_lengths_array[i, :, j]} , weight_category: {weight_category}")
+            #print(f"y : {link_lengths_array[i, :, j]} , weight_category: {weight_category}")
                 
-    #         fig.update_layout(
-    #                     yaxis=dict(title='Link lenght',tickvals=index_link_length),
-    #                     xaxis=dict(title='weights', tickvals=index_weigths, ticktext=weight_categories),
-    #                     title=f'Comparison of Link Lengths for Link {j + 1}',
-    #                     showlegend=True
-    #         )
+            fig.update_layout(
+                        yaxis=dict(title='Link lenght',tickvals=index_link_length),
+                        xaxis=dict(title='weights', tickvals=index_weigths, ticktext=weight_categories),
+                        title=f'Comparison of Link Lengths for Link {j + 1}',
+                        showlegend=True
+            )
         
-    # #     print()
-    #     figm.show()
-    #     fig.show()
+    #     print()
+        figm.show()
+        fig.show()
     
     plt.show()
