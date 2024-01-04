@@ -53,7 +53,10 @@ class PSO_batch(Design_Optimization):
                     #fval = float(loss.item())
                     #cost[i] = fval
                     #MORL ? I assumed this is a torch tensor since that makes sense
-                    loss = -torch.matmul(output, weights).mean().sum()
+                    if output.shape[1] != 1:
+                        loss = -torch.matmul(output, weights).mean()
+                    else:
+                        loss = -output.mean()
                     fval = float(loss.item())
                     cost[i] = fval
                     
