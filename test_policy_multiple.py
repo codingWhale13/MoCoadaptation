@@ -12,6 +12,7 @@ import numpy as np
 
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
+# -> set_seed/<weight folder name>/<model_name>
 
 #change <insert> to priori or inter based what you use or rename the folders '/Thesis/<insert>/ rest of the path
 
@@ -55,17 +56,19 @@ def read_morphology(path, checkpoint) -> list:
     return rows
 
 
-def run_tests(tests : int):
+def run_tests(tests : int, save_mode):
     for weight_folder in os.listdir(path_to_folder):
         weight_folder_path = os.path.join(path_to_folder, weight_folder)
         for model_folder in os.listdir(weight_folder_path):
             model_folder_path = os.path.join(weight_folder_path, model_folder)
             print(f"***Running tests for model: {model_folder_path} ***")
             for j in range(tests):
-                testing(model_folder_path, j)
+                testing(model_folder_path, j, save_mode)
                 
                 
-def testing(model_path, count):
+def testing(model_path, count, save_returns_mode):
+    
+    save_returns = save_returns_mode
     
     #check if coadapt object exists, destroy it if it does and create a new one
     if 'coadapt_test' in locals():
@@ -109,30 +112,80 @@ def testing(model_path, count):
     
     coadapt_test._env.set_new_design(link_lengths) # Set new link lenghts
     
+    # with open(
+    #         os.path.join(file_path,
+    #             'episodic_rewards_run_{}.csv'.format(run_name)
+    #             ), 'w') as fd:
+    #     #simulate the model
+    #     running_speed = []
+    #     energy_saving = []
+    #     for i in range(n):
+    #         cwriter = csv.writer(fd)
+    #         coadapt_test.initialize_episode()
+    #         coadapt_test.execute_policy()
+    #         #append iteration results to lists
+    #         running_speed.append(coadapt_test._data_reward_1[0])
+    #         energy_saving.append(coadapt_test._data_reward_2[0])
+    #         print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
+    #     #save results to csv file
+    #     cwriter.writerow(link_lengths)
+    #     cwriter.writerow(running_speed)
+    #     cwriter.writerow(energy_saving)
+            
+    # wandb.finish()   
+    
+        #csv file name
+    if save_returns:
+        file_name ='episodic_rewards_run_'
+    else:
+        file_name ='states_actions_run_'
+    
     with open(
             os.path.join(file_path,
-                'episodic_rewards_run_{}.csv'.format(run_name)
+                #'episodic_rewards_run_{}.csv'.format(run_name)
+                '{}{}.csv'.format(file_name, run_name)
                 ), 'w') as fd:
         #simulate the model
-        running_speed = []
-        energy_saving = []
+        
+        if save_returns:
+            running_speed = []
+            energy_saving = []
+        else:
+            states = []
+            actions = []
+        
         for i in range(n):
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
             coadapt_test.execute_policy()
             #append iteration results to lists
-            running_speed.append(coadapt_test._data_reward_1[0])
-            energy_saving.append(coadapt_test._data_reward_2[0])
+            if save_returns:
+                running_speed.append(coadapt_test._data_reward_1[0])
+                energy_saving.append(coadapt_test._data_reward_2[0])
+            else:
+                states.append(coadapt_test._states[0])
+                actions.append(coadapt_test._actions[0])
             print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
         #save results to csv file
-        cwriter.writerow(link_lengths)
-        cwriter.writerow(running_speed)
-        cwriter.writerow(energy_saving)
-            
-    wandb.finish()    
+        #Maybe too many if's here?
+        if save_returns:
+            cwriter.writerow(link_lengths)
+            cwriter.writerow(running_speed)
+            cwriter.writerow(energy_saving)
+        else:
+            states_transposed = list(map(list, zip(*states)))
+            actions_transposed = list(map(list, zip(*actions)))
+            cwriter.writerow(["States"])
+            cwriter.writerows(states_transposed)
+            cwriter.writerow(["Actions"])
+            cwriter.writerows(actions_transposed)
+    wandb.finish() 
 
 if __name__ == "__main__": 
 
-    test = 5
+    # Turn to True IF you want to save episodic returns, 
+    # Turn to False when saving states and actions to csv file
+    save_mode = False # True to episodic returns, False to states and actions
+    test = 1 # Amount of test runs done per model
     print(f"***Running {test} tests per each model***")
-    run_tests(test)
+    run_tests(test, save_mode)

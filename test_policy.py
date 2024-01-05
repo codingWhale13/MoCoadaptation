@@ -11,7 +11,7 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/Model_scalarized/results_with_rescaling/set_seed/0.99_0.01/Sat_Dec_23_15:02:39_2023__fda64079[0.99, 0.01]_4' 
+path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/0.99_0.01/Sat_Dec_23_15:02:39_2023__fda64079[0.99, 0.01]_4' 
 seed = path_to_folder[-1]
 newline=''
 
@@ -56,6 +56,8 @@ def read_morphology(path, checkpoint) -> list:
 
 if __name__ == "__main__": 
 
+    save_returns = True # Turn to True IF you want to save episodic returns, Turn to False when saving states and actions to csv file
+
     #Use to get last model checkpoint
     last_model_checkpoint_num = find_checkpoint(path_to_folder)#-1 # checkpoint
     print(last_model_checkpoint_num)
@@ -74,10 +76,10 @@ if __name__ == "__main__":
     print(f"Link lenghts: {link_lengths}")
     
     folder = experiment_config['data_folder'] #MORL
-    #rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     model_name = path_to_folder.split('/')[-1:]
     model_name = str(model_name[0])
-    file_str = './' + folder + '/' + '__' + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
+    file_str = './' + folder + '/' + '__' + rand_id + "_" + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
     experiment_config['data_folder_experiment'] = file_str # MORL
 
     #Create directory when not using video recording, turn off when you do, sloppy I know
@@ -91,34 +93,49 @@ if __name__ == "__main__":
     file_path = coadapt_test._config['data_folder_experiment'] #filepath
     n = 30 #iterations
     coadapt_test._env.set_new_design(link_lengths) # Set new link lenghts
+    #csv file name
+    if save_returns:
+        file_name ='episodic_rewards_run_'
+    else:
+        file_name ='states_actions_run_'
+    
     with open(
             os.path.join(file_path,
-                'episodic_rewards_run_{}.csv'.format(run_name)
+                #'episodic_rewards_run_{}.csv'.format(run_name)
+                '{}{}.csv'.format(file_name, run_name)
                 ), 'w') as fd:
         #simulate the model
-        running_speed = []
-        energy_saving = []
-        #states = []
-        #actions = []
+        
+        if save_returns:
+            running_speed = []
+            energy_saving = []
+        else:
+            states = []
+            actions = []
         
         for i in range(n):
             cwriter = csv.writer(fd)
             coadapt_test.initialize_episode()
             coadapt_test.execute_policy()
-            #print(coadapt_test._states)
-            #print()
-            #print(coadapt_test._actions)
             #append iteration results to lists
-            running_speed.append(coadapt_test._data_reward_1[0])
-            energy_saving.append(coadapt_test._data_reward_2[0])
-            #states.append(coadapt_test._states[0])
-            #actions.append(coadapt_test._actions[0])
-            #cwriter.writerow(states)
-            #cwriter.writerow(actions)
+            if save_returns:
+                running_speed.append(coadapt_test._data_reward_1[0])
+                energy_saving.append(coadapt_test._data_reward_2[0])
+            else:
+                states.append(coadapt_test._states[0])
+                actions.append(coadapt_test._actions[0])
             print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
         #save results to csv file
-        #cwriter.writerow(link_lengths)
-        #cwriter.writerow(running_speed)
-        #cwriter.writerow(energy_saving)
-        
+        #Maybe too many if's here?
+        if save_returns:
+            cwriter.writerow(link_lengths)
+            cwriter.writerow(running_speed)
+            cwriter.writerow(energy_saving)
+        else:
+            states_transposed = list(map(list, zip(*states)))
+            actions_transposed = list(map(list, zip(*actions)))
+            cwriter.writerow(["States"])
+            cwriter.writerows(states_transposed)
+            cwriter.writerow(["Actions"])
+            cwriter.writerows(actions_transposed)
     wandb.finish()

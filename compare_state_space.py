@@ -49,11 +49,11 @@ def sort_dictionaries(path):
                                     row_values = []
                                     if 'States' in row:
                                         switch = False
-                                        print(switch)
+                                        #print(switch)
                                         continue
                                     if 'Actions' in row:
                                         switch = True
-                                        print(switch)
+                                        #print(switch)
                                         continue
                                     
                                     for index in row:
@@ -74,8 +74,6 @@ def sort_dictionaries(path):
 
 
 if __name__ == "__main__":
-    
-    #the main is becomming awfully long, maybe these should just be put to functions....
     
     state_values, action_values = sort_dictionaries(path) #value_sums, value_sums_mean, link_lengths = sort_dictionaries(path)
     
@@ -99,3 +97,37 @@ if __name__ == "__main__":
     print(states_model.shape)
     #print()
     print(actions_model.shape)
+    
+    
+    #Extract relevant information
+    
+    weight_classes =  states_model.shape[0]
+    num_iterations = states_model.shape[2]
+    num_states = states_model.shape[3]
+
+    # Create a figure and axis
+    fig, ax = plt.subplots()
+    colors = plt.cm.viridis(np.linspace(0, 1, weight_classes))
+
+    # Loop through the iterations
+    for j in range(weight_classes):
+        
+        for i in range(num_iterations):
+            # Generate x values (time steps) for the current iteration
+            if i > -1:
+                x_values = np.arange(i * 1001, (i + 1) * 1001)
+
+                # Generate y values (state values) for the current iteration
+                y_values = states_model[j, :, i, :]  # Extract states for the current iteration
+
+                # Plot the states
+                ax.plot(x_values, y_values, color=colors[j], alpha=0.7, label=f'Iteration {i + 1}')
+
+    # Set labels and title
+    ax.set_xlabel('Time Steps')
+    ax.set_ylabel('State Values')
+    ax.set_title('States at Each 1001 Timesteps for 30 Iterations')
+
+    # Show legend
+    #ax.legend()
+    plt.show()
