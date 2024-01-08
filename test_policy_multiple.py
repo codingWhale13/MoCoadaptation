@@ -16,7 +16,11 @@ import numpy as np
 
 #change <insert> to priori or inter based what you use or rename the folders '/Thesis/<insert>/ rest of the path
 
-path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/test' # in path_to_folder have models in folders per each unique weight
+path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test'#'/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/test' # in path_to_folder have models in folders per each unique weight
+#/home/oskar/Thesis/inter/models/results_with_rescaling/set_seed/test
+#/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test
+
+
 newline=''
 experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here
@@ -112,28 +116,6 @@ def testing(model_path, count, save_returns_mode):
     
     coadapt_test._env.set_new_design(link_lengths) # Set new link lenghts
     
-    # with open(
-    #         os.path.join(file_path,
-    #             'episodic_rewards_run_{}.csv'.format(run_name)
-    #             ), 'w') as fd:
-    #     #simulate the model
-    #     running_speed = []
-    #     energy_saving = []
-    #     for i in range(n):
-    #         cwriter = csv.writer(fd)
-    #         coadapt_test.initialize_episode()
-    #         coadapt_test.execute_policy()
-    #         #append iteration results to lists
-    #         running_speed.append(coadapt_test._data_reward_1[0])
-    #         energy_saving.append(coadapt_test._data_reward_2[0])
-    #         print(f"Iteration done: {i}, Progress: {round((i/n)*100)}%")
-    #     #save results to csv file
-    #     cwriter.writerow(link_lengths)
-    #     cwriter.writerow(running_speed)
-    #     cwriter.writerow(energy_saving)
-            
-    # wandb.finish()   
-    
         #csv file name
     if save_returns:
         file_name ='episodic_rewards_run_'
@@ -179,13 +161,13 @@ def testing(model_path, count, save_returns_mode):
             cwriter.writerows(states_transposed)
             cwriter.writerow(["Actions"])
             cwriter.writerows(actions_transposed)
-    wandb.finish() 
+    #wandb.finish()   Needed for wandb tracking
 
 if __name__ == "__main__": 
 
     # Turn to True IF you want to save episodic returns, 
     # Turn to False when saving states and actions to csv file
-    save_mode = False # True to episodic returns, False to states and actions
+    save_mode = True # True to episodic returns, False to states and actions
     test = 1 # Amount of test runs done per model
     print(f"***Running {test} tests per each model***")
     run_tests(test, save_mode)

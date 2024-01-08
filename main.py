@@ -35,7 +35,7 @@ def main(config_name, weight_index):
     else:
         print(f"Custom seed set not set, using random seed")
     co.run()
-    wandb.finish()
+    #wandb.finish()  Needed for wandb tracking
 
 
 if __name__ == "__main__":
@@ -60,6 +60,7 @@ if __name__ == "__main__":
         print(f"index w : {weight_index}")
         print(config_name['weights'][weight_index]) 
     else:
+        #config_name = cfg.config_dict['sac_pso_sim']
         config_name = cfg.config_dict['sac_pso_sim']
         weight_index = 0
         seed = False

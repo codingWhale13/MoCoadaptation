@@ -98,9 +98,6 @@ if __name__ == "__main__":
     #print()
     print(actions_model.shape)
     
-    
-    #Extract relevant information
-    
     weight_classes =  states_model.shape[0]
     num_iterations = states_model.shape[2]
     num_states = states_model.shape[3]

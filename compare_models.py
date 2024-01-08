@@ -7,7 +7,8 @@ import plotly.graph_objects as go
 
 ### NEW VERSION ###
 
-path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
+#path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
+path='/home/oskar/Thesis/priori/model_comparison_results_batch'
 newline=''
 
 

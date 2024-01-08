@@ -79,9 +79,9 @@ class Coadaptation(object):
             config: A config dictonary.
             #UPDATE choice is from 0 to 10 choice of weights
         """
-        wandb.login(key="") # this should be key={insert key here without brackets} # Never push full key # !!!!!
+        #wandb.login(key="") # this should be key={insert key here without brackets} # Never push full key # !!!!!  # uncomment to track
         
-        wandb.init(project=project_name, name=run_name)
+        #wandb.init(project=project_name, name=run_name)  # uncomment to track
         
         self._config = config
         utils.move_to_cuda(self._config)
@@ -105,7 +105,7 @@ class Coadaptation(object):
 
         self._networks = self._rl_alg_class.create_networks(env=self._env, config=config)
 
-        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref, wandb_instance=wandb.run) # Need to pass weights to the SAC in RLkit
+        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref, wandb_instance=None) #wandb.run if tracking# Need to pass weights to the SAC in RLkit
 
         self._do_alg_class = select_design_opt_alg(self._config['design_optim_method'])
         self._do_alg = self._do_alg_class(config=self._config, replay=self._replay, env=self._env)
@@ -219,8 +219,8 @@ class Coadaptation(object):
         #reward_original = np.array([0, 0])# SORL #reward_original = 0.0  # -> same
         action_cost = 0.0
         nmbr_of_steps = 0
-        #states_arr = np.empty((0, 23)) # state saving
-        #actions_arr = np.empty((0 ,6)) # action saving
+        states_arr = np.empty((0, 23)) # state saving
+        actions_arr = np.empty((0 ,6)) # action saving
         
 
         if self._episode_counter < self._config['initial_episodes']:
@@ -241,8 +241,8 @@ class Coadaptation(object):
             new_state, reward, done, info = self._env.step(action)
             #print(action.shape)
             #print(state.shape)
-            #states_arr= np.vstack((states_arr, state)) # needed for saving the states #.append(action) #
-            #actions_arr = np.vstack((actions_arr, action)) # needed for saving the actions # .append(state)
+            states_arr= np.vstack((states_arr, state)) # needed for saving the states #.append(action) #
+            actions_arr = np.vstack((actions_arr, action)) # needed for saving the actions # .append(state)
             action_cost += info['orig_action_cost']
             #reward_ep += float(reward) #NOT WORKING  #SORL # changes need to be made here to convert scalar rewards to tuple or np.array
             reward_ep = np.add(reward_ep, reward, casting='unsafe') # MORL
@@ -254,10 +254,10 @@ class Coadaptation(object):
         #self._data_rewards.append(reward_ep) # SORL # I think needs to be changed. The rewards should be two categories
         self._data_reward_1.append(reward_ep[0])
         self._data_reward_2.append(reward_ep[1])
-        #self._states.append(states_arr) # needed for saving the states
-        #self._actions.append(actions_arr) # needed for saving the actions
+        self._states.append(states_arr) # needed for saving the states
+        self._actions.append(actions_arr) # needed for saving the actions
         #saved to wandb the episodic reward
-        wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]})
+        #wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]}) # uncomment to track
         
         
 
