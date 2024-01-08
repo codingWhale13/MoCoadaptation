@@ -47,7 +47,7 @@ def main(config_name, weight_index): # MORL
         print(f"Custom seed set not set, using random seed")
     #run coadapt
     co.run()
-    wandb.finish()
+    #wandb.finish()
 
 
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         print(f"index w : {weight_index}")
         print(config_name['weights'][weight_index]) 
     else:
-        config_name = cfg.config_dict['sac_pso_sim']
+        config_name = cfg.config_dict['sac_pso_batch']
         weight_index = 0
         seed = False
         project_name="coadapt-save-testing"

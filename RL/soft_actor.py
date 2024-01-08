@@ -11,7 +11,7 @@ import utils
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
 
-    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance):
+    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance): # uncomment to track with wandb
         """ Bascally a wrapper class for SAC from rlkit.
 
         Args:
@@ -33,7 +33,7 @@ class SoftActorCritic(RL_algorithm):
         self._ind_qf2_target = networks['individual']['qf2_target']
         self._ind_policy = networks['individual']['policy']
 
-        self._pop_qf1 = networks['population']['qf1']
+        self._pop_qf1 = networks['population']['qf1'] 
         self._pop_qf2 = networks['population']['qf2']
         self._pop_qf1_target = networks['population']['qf1_target']
         self._pop_qf2_target = networks['population']['qf2_target']
@@ -44,7 +44,7 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_pop_updates = config['rl_algorithm_config']['pop_updates']
 
         self._weight_pref = weight_pref # Needed for MORL
-        self._wandb_instance = wandb_instance # Needed for passing values to wandb from sac.py from RLkit # MORL
+        self._wandb_instance = wandb_instance # Needed for passing values to wandb from sac.py from RLkit # MORL # uncomment to track with wandb
         
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
@@ -55,7 +55,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning = False,
             weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
-            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_spec,
             
         )
@@ -69,7 +69,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning = False,
             weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
-            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_pop,
             
         )
@@ -93,7 +93,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning = False,
             # alt_alpha = self._alt_alpha,
             weight_pref = self._weight_pref, # Needed to pass the weight_preferences # MORL
-            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            wandb_instance = self._wandb_instance, # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_spec
         )
         if self._config['rl_algorithm_config']['copy_from_gobal']:

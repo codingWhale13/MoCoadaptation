@@ -11,7 +11,7 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/inter/models/results_with_rescaling/set_seed/0.7_0.3/Fri_Dec_29_22:47:42_2023__1186cf06[0.7, 0.3]_1' 
+path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/test/0.6_0.4/Thu_Jan__4_20:03:30_2024__15150f3c[0.6, 0.4]_5' 
 
 seed = path_to_folder[-1]
 newline=''
@@ -112,4 +112,4 @@ if __name__ == "__main__":
         cwriter.writerow(running_speed)
         cwriter.writerow(energy_saving)
         
-    wandb.finish()
+    # wandb.finish() # uncomment to track with wandb

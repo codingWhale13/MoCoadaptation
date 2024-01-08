@@ -79,9 +79,9 @@ class Coadaptation(object):
             config: A config dictonary.
             #UPDATE choice is from 0 to 10 choice of weights
         """
-        wandb.login(key="") # this should be key={insert key here without brackets} # Never push full key # !!!!!
+        #wandb.login(key="") # this should be key={insert key here without brackets} # Never push full key # !!!!! # uncomment to track with wandb
         
-        wandb.init(project=project_name, name=run_name)
+        #wandb.init(project=project_name, name=run_name) # uncomment to track with wandb
         
         self._config = config
         utils.move_to_cuda(self._config)
@@ -105,7 +105,7 @@ class Coadaptation(object):
 
         self._networks = self._rl_alg_class.create_networks(env=self._env, config=config)
 
-        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref, wandb_instance=wandb.run) # Need to pass weights to the SAC in RLkit
+        self._rl_alg = self._rl_alg_class(config=self._config, env=self._env , replay=self._replay, networks=self._networks, weight_pref=self._weights_pref, wandb_instance=None)# change instance to wandb instance to track
 
         self._do_alg_class = select_design_opt_alg(self._config['design_optim_method'])
         self._do_alg = self._do_alg_class(config=self._config, replay=self._replay, env=self._env)
@@ -247,7 +247,7 @@ class Coadaptation(object):
         self._data_reward_2.append(reward_ep[1])
         #saved to wandb the episodic reward
         #reward_arr = np.array(self._data_design_type, dtype=float)
-        wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]})
+        #wandb.log({"Reward run" :reward_ep[0], "Reward energy consumption" :reward_ep[1]}) # uncomment to track with wandb
         
         
 
