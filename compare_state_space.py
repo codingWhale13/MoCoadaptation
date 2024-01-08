@@ -108,26 +108,38 @@ if __name__ == "__main__":
     # Create a figure and axis
     fig, ax = plt.subplots()
     colors = plt.cm.viridis(np.linspace(0, 1, weight_classes))
+    iterations = 28 #-1 # switch the amount of iterations to plot more tests or not max 30 aka 29
 
-    # Loop through the iterations
-    for j in range(weight_classes):
-        
+    legend_added = set()
+    legend_labels = []
+    legend_handles = []
+    
+    unique_weight_groups = sorted(set(sorted_state_values.keys()), key=convert_key_to_tuple)
+    #for j in range(weight_classes):
+    for j, (key1, key2) in enumerate([(key1, key2) for key1 in sorted_state_values.keys() for key2 in sorted_state_values[key1].keys()]):
+        mask = [key_compare == key1 for key_compare in sorted_state_values.keys()]
+        weight_group = unique_weight_groups[np.where(mask)[0][0]] 
         for i in range(num_iterations):
-            # Generate x values (time steps) for the current iteration
-            if i > -1:
-                x_values = np.arange(i * 1001, (i + 1) * 1001)
-
-                # Generate y values (state values) for the current iteration
-                y_values = states_model[j, :, i, :]  # Extract states for the current iteration
-
-                # Plot the states
-                ax.plot(x_values, y_values, color=colors[j], alpha=0.7, label=f'Iteration {i + 1}')
+            # for only certain iteration
+            if i > iterations: #-1:
+                if weight_group not in legend_added:
+                    x_values = np.arange(i * 1001, (i + 1) * 1001)
+                    y_values = states_model[j, :, i, :]  # Extract states for the current iteration
+                    line = ax.plot(x_values, y_values, color=colors[j], alpha=0.5)#, label=f'State {j + 1}, {weight_group}')
+                    legend_labels.append(f'States (23) : {weight_group}')
+                    legend_handles.append(line[0])
+                    #print(legend_handles)
+                    legend_added.add(weight_group)
+                else:
+                    x_values = np.arange(i * 1001, (i + 1) * 1001)
+                    y_values = states_model[j, :, i, :]  # Extract states for the current iteration
+                    ax.plot(x_values, y_values, color=colors[j], alpha=0.5)
+        
 
     # Set labels and title
     ax.set_xlabel('Time Steps')
     ax.set_ylabel('State Values')
-    ax.set_title('States at Each 1001 Timesteps for 30 Iterations')
+    ax.set_title(f'States at Each 1001 Timesteps for {29-iterations} Iterations')
+    ax.legend(handles=legend_handles, labels=legend_labels)
 
-    # Show legend
-    #ax.legend()
     plt.show()
