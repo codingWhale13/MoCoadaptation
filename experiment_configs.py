@@ -18,17 +18,18 @@ sac_pso_batch = {
     'steps_per_episodes' : 1000,                # Number of steps per episode
     'save_networks' : True,                     # If True networks are checkpointed and saved for each design
     'rl_method' : 'SoftActorCritic',            # Which reinforcement learning method to use.
-    'weights': [[0., 1.], 
-                [0.1, 0.9], 
-                [0.2, 0.8], 
-                [0.3, 0.7],
-                [0.4, 0.6],
-                [0.5, 0.5],
-                [0.6, 0.4],
-                [0.7, 0.3],
-                [0.8, 0.2],
-                [0.9, 0.1],
-                [1., 0.]
+    'load_model' : True, # Turn to False if you dont want to load a model at the start of the training to start from
+    'weights': [[0.,1.], 
+                [0.1,0.9], 
+                [0.2,0.8], 
+                [0.3,0.7],
+                [0.4,0.6],
+                [0.5,0.5],
+                [0.6,0.4],
+                [0.7,0.3],
+                [0.8,0.2],
+                [0.9,0.1],
+                [1.,0.]
                 ],  #Needed for MORL weigh preferences
     'rl_algorithm_config' : dict(               # Dictonary which contains the parameters for the RL algorithm
         algo_params=dict(                           # Parameters for the RL learner for the individual networks
@@ -95,17 +96,17 @@ sac_pso_sim = {
     'steps_per_episodes' : 1000,              # 1000  # Number of steps per episode ##MODDED##
     'save_networks' : True,
     'rl_method' : 'SoftActorCritic',
-    'weights': [[0., 1.], 
-                [0.1, 0.9], 
-                [0.2, 0.8], 
-                [0.3, 0.7],
-                [0.4, 0.6],
-                [0.5, 0.5],
-                [0.6, 0.4],
-                [0.7, 0.3],
-                [0.8, 0.2],
-                [0.9, 0.1],
-                [1., 0.]
+    'weights': [[0.,1.], 
+                [0.1,0.9], 
+                [0.2,0.8], 
+                [0.3,0.7],
+                [0.4,0.6],
+                [0.5,0.5],
+                [0.6,0.4],
+                [0.7,0.3],
+                [0.8,0.2],
+                [0.9,0.1],
+                [1.,0.]
                 ],  #Needed for MORL weigh preferences
     'rl_algorithm_config' : dict(
         algo_params=dict(
@@ -149,7 +150,7 @@ sac_pso_sim = {
     ),
     'env' : dict(
         env_name='HalfCheetah',
-        render=True,
+        render=False,
         record_video=False#True, #False # Remember to turn off when you do you want to record video or train in cloud etc...
     ),
     }
