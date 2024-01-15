@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 
 ### NEW VERSION ###
 
-#path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
-path='/home/oskar/Thesis/priori/model_comparison_results_batch'
+path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
+#path='/home/oskar/Thesis/priori/model_comparison_results_batch'
 newline=''
 
 
@@ -114,6 +114,7 @@ def scatter_plot():
     ax2.set_ylabel('Energy')
     ax2.set_xlabel('Speed')
     ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
+    ax2.set_aspect('equal')
 
     unique_weight_groups = sorted(set(sorted_mean.keys()), key=convert_key_to_tuple)
     
@@ -144,15 +145,21 @@ def scatter_plot():
     ax2.errorbar(reward_mean[:, 0], reward_mean[:, 1],
         xerr=ci_running_speed,
         yerr=ci_energy_consumption,
-        fmt='_', capsize=5, color='black', label='Error bars')
+        fmt='_', 
+        capsize=5, 
+        color='black', 
+        label='Error bars')
     ax2.legend()
     
     
-def link_lenght_plot():
-    """ link lenght plot
+def link_length_plot(save_file : bool = False, save_dir = 'link_length_comparison'):
+    """ link length plot
+    Set to 'True' to save plots into html files or 'False' to not save
     """  
     weight_categories = list(sorted_link_lengths.keys())
     distinct_error_colors = list(plt.get_cmap('plasma')(i / len(weight_categories)) for i, _ in enumerate(weight_categories)) # viridis_r
+
+    os.makedirs(save_dir, exist_ok=True)
 
     for j in range(link_lengths_array.shape[2]):
         figv = go.Figure()
@@ -200,9 +207,15 @@ def link_lenght_plot():
                         title=f'Comparison of Link Lengths for Link {j + 1}',
                         showlegend=True
             )
-            
-        figm.show()
-        figv.show()
+        if save_file: 
+            html_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values.html')
+            figm.write_html(html_file_path_mean)
+            print(f'Figure saved as {html_file_path_mean}')
+            html_file_path_reg = os.path.join(save_dir, f'Link_length_{j + 1}_values.html')
+            figv.write_html(html_file_path_reg)
+            print(f'Figure saved as {html_file_path_reg}')
+        #figm.show() # uncomment to see the plots 
+        #figv.show() # uncomment to see the plots 
 
 
 if __name__ == "__main__":
@@ -243,5 +256,5 @@ if __name__ == "__main__":
     
     bar_plot()
     scatter_plot()
-    link_lenght_plot()
+    link_length_plot(False)
     plt.show(block=True)

@@ -73,7 +73,7 @@ def sort_dictionaries(path):
     return state_values, action_values
 
 
-def compare_state_plot(range_iter : int, save_dir = 'state_action_comparison') :
+def compare_state_plot(range_iter : int, save : bool = False, save_dir = 'state_action_comparison') :
     
     """ compare states
     """ 
@@ -88,57 +88,39 @@ def compare_state_plot(range_iter : int, save_dir = 'state_action_comparison') :
 
     for j in range(states_model.shape[0]): #(1):#
         figv = go.Figure()
-        index_iter = np.arange(states_model.shape[1])
         num_iter = np.arange(states_model.shape[3])
-        for i in range(states_model.shape[2]):#range(1):   #
-            if i >= iter_range:
-                for k in range(states_model.shape[3]):
+        for k in range(states_model.shape[3]):
                         
-                    color = f'rgb({distinct_error_colors[k][0]*255},{distinct_error_colors[k][1]*255},{distinct_error_colors[k][2]*255})'
-                        # REGULAR VALUES
-                        
-                        #trace_name = f'State : {k}' if i == iter_range else None  # Set name only for the first iteration
-                    trace_name = f'State : {k}'
-                    for _, y_value in enumerate(states_model[j, :, i, k]):  
-                        figv.add_trace(go.Scatter(
-                            x=np.array([num_iter[k]]),  # Use a list with a single value
-                            y=np.array([y_value]), #[y_value], #[states_model[j, :, i, k]]
-                            mode='markers+lines',
-                            name=trace_name,
-                            marker=dict(color=color),
-                            line=dict(color=color)
-                            ))
-                        figv.update_layout(
-                            yaxis=dict(title='State value'),#,tickvals=index_iter, ticktext=index_iter),
-                            xaxis=dict(title='State index'),#, tickvals=index_states, ticktext=index_states),
-                            title=f'Comparison of weight : {weight_categories[j]} for all the states',
-                            #hovermode='x unified',
-                            showlegend=True
-                    )
-                    # figv.add_trace(go.Scatter(
-                    #         x=num_iter,  # Use a list with a single value
-                    #         y=states_model[j, :, i, k], #[y_value], #[states_model[j, :, i, k]]
-                    #         #yaxis=1,
-                    #         mode='markers+lines',
-                    #         name=trace_name,
-                    #         marker=dict(color=color),
-                    #         line=dict(color=color),
-                    #         orientation='h'
-                    #         ))
-                    # figv.update_layout(
-                    #         yaxis=dict(title='State value'),#,tickvals=index_iter, ticktext=index_iter),
-                    #         xaxis=dict(title='State index'),#, tickvals=index_states, ticktext=index_states),
-                    #         title=f'Comparison of weight : {weight_categories[j]} for all the states',
-                    #         hovermode='y unified',
-                    #         showlegend=True
-                    # )
-        html_file_path = os.path.join(save_dir, f'States_{weight_categories[j]}.html')
-        figv.write_html(html_file_path)
-        print(f'Figure saved as {html_file_path}')
+            color = f'rgb({distinct_error_colors[k][0]*255},{distinct_error_colors[k][1]*255},{distinct_error_colors[k][2]*255})'
+            trace_name = f'State : {k}'
+            
+            figv.add_trace(go.Scatter(
+                x=[num_iter[k]],
+                y=[states_mean_array[j, k]],
+                mode='markers+lines',
+                name=trace_name,
+                marker=dict(color=color),
+                error_y=dict(
+                type='data',
+                array=[states_std_array[j, k]],
+                visible=True,
+                color=color)
+                ))
+            figv.update_layout(
+                yaxis=dict(title='State value'),
+                xaxis=dict(title='State index'),
+                title=f'Comparison of weight : {weight_categories[j]} for all the states',
+                hovermode='y unified',
+                showlegend=True
+                )
+        if save:
+            html_file_path = os.path.join(save_dir, f'States_{weight_categories[j]}.html')
+            figv.write_html(html_file_path)
+            print(f'Figure saved as {html_file_path}')
         #figv.show()
         
 
-def compare_action_plot(range_iter : int, save_dir = 'state_action_comparison') :
+def compare_action_plot(range_iter : int, save : bool = False, save_dir = 'state_action_comparison') :
     
     """ compare states
     """ 
@@ -153,36 +135,36 @@ def compare_action_plot(range_iter : int, save_dir = 'state_action_comparison') 
 
     for j in range(actions_model.shape[0]): #(1):#
         figv = go.Figure()
-        index_iter = np.arange(actions_model.shape[1])
         num_iter = np.arange(actions_model.shape[3])
-        for i in range(actions_model.shape[2]):#range(1):   #
-            if i >= iter_range:
-                for k in range(actions_model.shape[3]):
-                        
-                    color = f'rgb({distinct_error_colors[k][0]*255},{distinct_error_colors[k][1]*255},{distinct_error_colors[k][2]*255})'
-                        # REGULAR VALUES
-                        
-                        #trace_name = f'State : {k}' if i == iter_range else None  # Set name only for the first iteration
-                    trace_name = f'State : {k}'
-                    for _, y_value in enumerate(actions_model[j, :, i, k]):  
-                        figv.add_trace(go.Scatter(
-                            x=np.array([num_iter[k]]),  # Use a list with a single value
-                            y=np.array([y_value]), #[y_value], #[states_model[j, :, i, k]]
-                            mode='markers+lines',
-                            name=trace_name,
-                            marker=dict(color=color),
-                            line=dict(color=color)
-                            ))
-                        figv.update_layout(
-                            yaxis=dict(title='Action value'),#,tickvals=index_iter, ticktext=index_iter),
-                            xaxis=dict(title='Action index'),#, tickvals=index_states, ticktext=index_states),
-                            title=f'Comparison of weight : {weight_categories[j]} for all the states',
-                            #hovermode='x unified',
-                            showlegend=True
-                    )
-        html_file_path = os.path.join(save_dir, f'Actions_{weight_categories[j]}.html')
-        figv.write_html(html_file_path)
-        print(f'Figure saved as {html_file_path}')
+        for k in range(actions_model.shape[3]):
+            
+            color = f'rgb({distinct_error_colors[k][0]*255},{distinct_error_colors[k][1]*255},{distinct_error_colors[k][2]*255})'
+            trace_name = f'State : {k}'
+                    
+            figv.add_trace(go.Scatter(
+                x=[num_iter[k]],
+                y=[actions_mean_array[j, k]],
+                mode='markers+lines',
+                name=trace_name,
+                marker=dict(color=color),
+                error_y=dict(
+                type='data',
+                array=[actions_std_array[j, k]],
+                visible=True,
+                color=color)
+                ))
+            figv.update_layout(
+                yaxis=dict(title='State value'),
+                xaxis=dict(title='State index'),
+                title=f'Comparison of weight : {weight_categories[j]} for all the states',
+                hovermode='y unified',
+                showlegend=True
+                )
+        if save:
+            html_file_path = os.path.join(save_dir, f'Actions_{weight_categories[j]}.html')
+            figv.write_html(html_file_path)
+            print(f'Figure saved as {html_file_path}')
+        figv.show()
 
 if __name__ == "__main__":
     
@@ -205,12 +187,14 @@ if __name__ == "__main__":
     states_model = np.array([sorted_state_values[key1][key2]['states'] for key1 in sorted_state_values.keys() for key2 in sorted_state_values[key1].keys()])
     actions_model = np.array([sorted_action_values[key1][key2]['actions'] for key1 in sorted_action_values.keys() for key2 in sorted_action_values[key1].keys()])
 
-    print(states_model.shape)
-    #print()
-    print(actions_model.shape)
+    # last episode of states
+    states_mean_array = np.mean(states_model[:, :, 29, :], axis=1)
+    states_std_array = np.mean(states_model[:, :, 29, :], axis=1)
     
-    print(states_model[0, :, 0, :].shape)
+    # last episode of actions
+    actions_mean_array = np.mean(actions_model[:, :, 29, :], axis=1)
+    actions_std_array = np.mean(actions_model[:, :, 29, :], axis=1)
 
-    compare_state_plot(29)
-    compare_action_plot(29)
+    #compare_state_plot(29, True)
+    compare_action_plot(29, True)
     plt.show(block=True)
