@@ -70,6 +70,7 @@ if __name__ == "__main__":
         run_name = sys.argv[4]
         seed = int(sys.argv[5])
         model_path = sys.argv[6]
+        track = False
         print(run_name)
         print(project_name)
         #Later on needs to changed to give you a option to give trackable names for wandb tracking
@@ -83,6 +84,8 @@ if __name__ == "__main__":
         project_name = sys.argv[3]
         run_name = sys.argv[4]
         seed = int(sys.argv[5])
+        model_path = None
+        track = False
         print(run_name)
         print(project_name)
         #Later on needs to changed to give you a option to give trackable names for wandb tracking
@@ -93,7 +96,9 @@ if __name__ == "__main__":
         weight_index = int(sys.argv[2])
         project_name = sys.argv[3]
         run_name = sys.argv[4]
+        model_path = None
         seed = False
+        track = False
         print(run_name)
         print(project_name)
         #Later on needs to changed to give you a option to give trackable names for wandb tracking
@@ -107,6 +112,8 @@ if __name__ == "__main__":
         run_name="default-run-weight" + f"-{config_name['weights'][weight_index]}"
         print(config_name['weights'][weight_index])
         seed = False
+        model_path = None
+        track = False
         #Later on needs to changed to give you a option to give trackable names for wandb tracking
         print(f"index w : {weight_index}")
         print(f"seed : {seed}")
