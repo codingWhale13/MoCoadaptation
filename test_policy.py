@@ -11,12 +11,13 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/test/0.6_0.4/Thu_Jan__4_20:03:30_2024__15150f3c[0.6, 0.4]_5' 
+#path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/0.7_0.3/Thu_Jan__4_20:03:30_2024__c6d9d6f1[0.7, 0.3]_1' 
+path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/steered/0.0_1.0/Tue_Jan__9_22:09:04_2024__a50b85bd[0.0, 1.0]_1'
 
 seed = path_to_folder[-1]
 newline=''
 
-experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
+experiment_config = experiment_configs.sac_pso_batch #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here
 project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
 run_name = "test" #"0, 1, 5"#"1, 0, 7"

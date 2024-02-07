@@ -8,8 +8,8 @@ import plotly.graph_objects as go
 ### NEW VERSION ###
 
 #path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
-path='/home/oskar/Thesis/inter/model_comparison_results_batch/vect'
-#path='/home/oskar/Thesis/inter/model_comparison_results_batch/steered'
+#path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/vect'
+path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/steered'
 newline=''
 
 
@@ -34,7 +34,7 @@ def convert_key_to_tuple(key):
     return tuple(map(float, key_values))
 
 
-def sort_dictionaries(path):
+def sort_dictionaries(path, loaded = False):
     """ sorts through files for a given folder
     
     Returns: returns dictionaries with files values
@@ -53,8 +53,14 @@ def sort_dictionaries(path):
             for directoryname2 in os.listdir(directorypath):
                 #Set new directory path
                 directorypath2 = os.path.join(directorypath, directoryname2)
-                directory_keyname = directoryname2.split('[')[-1:]
-                directory_keyname = directory_keyname[0].replace("]", "_").replace(", ", "_") # This line could lead to problems when checking results with vectorized models, since their model names dont have a space there in the naming
+                if not loaded:
+                    directory_keyname = directoryname2.split('[')[-1:]
+                    directory_keyname = directory_keyname[0].replace("]", "_").replace(", ", "_") # This line could lead to problems when checking results with vectorized models, since their model names dont have a space there in the naming
+                else:
+                    directory_keyname = directoryname2.split('__')[:]
+                    directory_keyname = directory_keyname[1].split('[')[:]
+                    directory_keyname = directory_keyname[0][:-1]
+                    directory_keyname = directory_keyname.replace(",", "_")
                 # Go through and save data to dictionaries
                 if os.path.isdir(directorypath2):
                     total_run_spd_reward = np.array([]) #reset when in new file
@@ -105,7 +111,7 @@ def bar_plot():
     ax.set_ylabel('Mean sums')
     ax.set_title('Mean episodic returns for each weight of Running Speed and Energy Consumption for Each Weight')
     ax.set_xticks(index)
-    ax.set_xticklabels([key2 for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right')
+    ax.set_xticklabels([f"{key2}->{key1}" for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right') #ADD both keys to names
     ax.legend()
 
 def scatter_plot():
@@ -116,6 +122,7 @@ def scatter_plot():
     ax2.set_xlabel('Speed')
     ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
     ax2.set_aspect('equal')
+    #ax2.set_figure(6,6)
     unique_weight_groups = sorted(set(sorted_mean.keys()), key=convert_key_to_tuple)
     
     #distinct_colors = get_distinct_colors(len(unique_weight_groups)) # works better to get colors more apart from each other
@@ -125,17 +132,20 @@ def scatter_plot():
 
     #shapes of markers
     marker_shapes = [".", ",", "o", "v", "^", "<", ">", "p", "*", "+", "h", "D", "8", ""]
+    #marker_shapes = ["o", "s", "D", "^", "v", "<", ">", "p", "*", "+", "h", ".", "8", ","]
 
     for index, (key1, key2) in enumerate([(key1, key2) for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()]):
         mask = [key_compare == key1 for key_compare in sorted_mean.keys()]
         weight_group = unique_weight_groups[np.where(mask)[0][0]]  # Find the index where the mask is True
-        
+        alp_value = 0.8
+        #shape = marker_shapes[len(legend_added) % len(marker_shapes)]    
+        #_ = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, alpha=alp_value, label=weight_group)   
         if weight_group not in legend_added:
-            shape = marker_shapes[len(legend_added) % len(marker_shapes)]
-            sc = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, label=weight_group)   
-            legend_added[weight_group] = True
+           shape = marker_shapes[len(legend_added) % len(marker_shapes)]   
+           sc = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, alpha=alp_value, label=weight_group)   
+           legend_added[weight_group] = True
         else:
-            sc = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape)
+           sc = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, alpha=alp_value)
 
     ###Add or dont add annotations per model###    
     ###annote the point to scatter plot###
@@ -145,7 +155,10 @@ def scatter_plot():
     ax2.errorbar(reward_mean[:, 0], reward_mean[:, 1],
         xerr=ci_running_speed,
         yerr=ci_energy_consumption,
-        fmt='_', capsize=5, color='black', label='Error bars')
+        fmt='none', 
+        capsize=0,
+        color='black',
+        label='Error bars')
     ax2.legend()
     
     
@@ -216,7 +229,7 @@ def link_length_plot(save_file : bool = False, save_dir = 'link_length_compariso
 
 if __name__ == "__main__":
     
-    value_mean, value_std, link_lengths = sort_dictionaries(path)
+    value_mean, value_std, link_lengths = sort_dictionaries(path, True) # If you're analysing models trained with pre-trained model, pass 'True' else 'False'
     # Sort dictionaries based on keys
     sorted_mean = dict(sorted(value_mean.items(), key=lambda item: convert_key_to_tuple(item[0])))
     sorted_std = dict(sorted(value_std.items(), key=lambda item: convert_key_to_tuple(item[0])))
@@ -252,5 +265,5 @@ if __name__ == "__main__":
     
     bar_plot()
     scatter_plot()
-    link_length_plot(False)
+    #link_length_plot(False)
     plt.show(block=True)
