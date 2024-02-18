@@ -7,10 +7,13 @@ import plotly.graph_objects as go
 
 ### NEW VERSION ###
 
-path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
-#path='/home/oskar/Thesis/priori/model_comparison_results_batch'
+#path='/home/oskar/Thesis/priori/model_comparison_results_sim' # paths need to be correct
+path='/home/oskar/Thesis/priori/model_comparison_results_batch'
 newline=''
 
+#save_file_name = 'link_lenght_comparison_sim' # for saving the file if needed 
+#OR switch between
+save_file_name = 'link_lenght_comparison_batch'
 
 def get_distinct_colors(n):
 
@@ -110,11 +113,11 @@ def bar_plot():
 def scatter_plot():
     """ Scatter plot
     """  
-    _, ax2 = plt.subplots()
+    _, ax2 = plt.subplots(figsize=(7, 7))
     ax2.set_ylabel('Energy')
     ax2.set_xlabel('Speed')
-    ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
-    ax2.set_aspect('equal')
+    #ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
+    #ax2.set_aspect('equal')
 
     unique_weight_groups = sorted(set(sorted_mean.keys()), key=convert_key_to_tuple)
     
@@ -146,13 +149,13 @@ def scatter_plot():
         xerr=ci_running_speed,
         yerr=ci_energy_consumption,
         fmt='_', 
-        capsize=5, 
+        capsize=0, 
         color='black', 
         label='Error bars')
     ax2.legend()
     
     
-def link_length_plot(save_file : bool = False, save_dir = 'link_length_comparison'):
+def link_length_plot(save_file : bool = False, save_dir = 'link_length_comparison_results'):
     """ link length plot
     Set to 'True' to save plots into html files or 'False' to not save
     """  
@@ -208,14 +211,20 @@ def link_length_plot(save_file : bool = False, save_dir = 'link_length_compariso
                         showlegend=True
             )
         if save_file: 
+            #save as html for comparisons
             html_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values.html')
             figm.write_html(html_file_path_mean)
             print(f'Figure saved as {html_file_path_mean}')
             html_file_path_reg = os.path.join(save_dir, f'Link_length_{j + 1}_values.html')
             figv.write_html(html_file_path_reg)
             print(f'Figure saved as {html_file_path_reg}')
-        #figm.show() # uncomment to see the plots 
-        #figv.show() # uncomment to see the plots 
+            #save the means as pdf
+            pdf_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values_{save_file_name.split("_")[-1]}_.pdf')
+            figm.write_image(pdf_file_path_mean, format='pdf')
+            print(f'Figure saved as {pdf_file_path_mean}')
+            
+        figm.show() # uncomment to see the plots 
+        figv.show() # uncomment to see the plots 
 
 
 if __name__ == "__main__":
@@ -254,7 +263,14 @@ if __name__ == "__main__":
     ci_running_speed = confidency_interval * (np.array([reward_std[i][0] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
     ci_energy_consumption = confidency_interval * (np.array([reward_std[i][1] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
     
+    ci_link_length = confidency_interval * (link_lengths_std_array)
+    
+    
+    
     bar_plot()
     scatter_plot()
-    link_length_plot(False)
+    if save_file_name:
+        link_length_plot(True, save_file_name)
+    else:
+        link_length_plot(False)
     plt.show(block=True)
