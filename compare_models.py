@@ -7,11 +7,15 @@ import plotly.graph_objects as go
 
 ### NEW VERSION ###
 
-#path='/home/oskar/Thesis/priori/model_comparison_results' # paths need to be correct
 #path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/vect'
 path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/steered'
+
 newline=''
 
+#file names for link lenghts etc...
+#save_file_name = 'link_lenght_comparison_batch_vect'
+#OR
+save_file_name = 'link_lenght_comparison_batch_vect_steered'
 
 def get_distinct_colors(n):
 
@@ -87,10 +91,10 @@ def sort_dictionaries(path, loaded = False):
     return value_mean, value_std, link_lengths
 
 
-def bar_plot():
+def bar_plot(steered : bool = False):
     """ Bar plot
     """  
-    _, ax = plt.subplots()
+    _, ax = plt.subplots(figsize=(5, 5))
     bar_width = 0.3
     off_set = 0.15
     index = np.arange(len(reward_mean))
@@ -111,17 +115,22 @@ def bar_plot():
     ax.set_ylabel('Mean sums')
     ax.set_title('Mean episodic returns for each weight of Running Speed and Energy Consumption for Each Weight')
     ax.set_xticks(index)
-    ax.set_xticklabels([f"{key2}->{key1}" for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right') #ADD both keys to names
+    if steered:
+        ax.set_xticklabels([f"{key2}->{key1}" for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right') #ADD both keys to names
+    else:
+        ax.set_xticklabels([key2 for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right') #ADD both keys to names
     ax.legend()
 
 def scatter_plot():
     """ Scatter plot
-    """  
-    _, ax2 = plt.subplots()
+    """ 
+     
+    _, ax2 = plt.subplots(figsize=(7, 7))
     ax2.set_ylabel('Energy')
     ax2.set_xlabel('Speed')
-    ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
-    ax2.set_aspect('equal')
+    #ax2.set_title('Mean Episodic Returns for Running Speed and Energy Consumption for Each Weight')
+    #ax2.set_aspect('equal')
+    #ax2.set_aspect('equal', 'datalim')
     #ax2.set_figure(6,6)
     unique_weight_groups = sorted(set(sorted_mean.keys()), key=convert_key_to_tuple)
     
@@ -218,12 +227,18 @@ def link_length_plot(save_file : bool = False, save_dir = 'link_length_compariso
                         showlegend=True
             )
         if save_file: 
+            #save as html for comparisons
             html_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values.html')
             figm.write_html(html_file_path_mean)
             print(f'Figure saved as {html_file_path_mean}')
             html_file_path_reg = os.path.join(save_dir, f'Link_length_{j + 1}_values.html')
             figv.write_html(html_file_path_reg)
             print(f'Figure saved as {html_file_path_reg}')
+            #save the means as pdf
+            pdf_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values_{save_file_name.split("_")[-1]}_.pdf')
+            figm.write_image(pdf_file_path_mean, format='pdf')
+            print(f'Figure saved as {pdf_file_path_mean}')
+            
         figm.show() # uncomment to see the plots 
         figv.show() # uncomment to see the plots 
 
@@ -263,7 +278,10 @@ if __name__ == "__main__":
     ci_running_speed = confidency_interval * (np.array([reward_std[i][0] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
     ci_energy_consumption = confidency_interval * (np.array([reward_std[i][1] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
     
-    bar_plot()
+    bar_plot(True)
     scatter_plot()
-    #link_length_plot(False)
+    if save_file_name:
+        link_length_plot(True, save_file_name)
+    else:
+        link_length_plot(False)
     plt.show(block=True)
