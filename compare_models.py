@@ -65,10 +65,7 @@ def sort_dictionaries(path):
                             with open(filepath, newline=newline) as file:
                                 reader = csv.reader(file)
                                 rows = [] # list for read values
-                                # total_run_spd_reward = np.array([]) #reset when in new directory
-                                # total_energy_cons_reward = np.array([])
-                                # link_lenghts_ind = np.array([])
-                                link_lenghts_ind = np.array([])
+                                link_lenghts_ind = np.array([]) # only the last link length needs to be saved since they are the same between the test run with same model
                                 for row in reader:
                                     rows.append(row)
                                 link_lenghts_ind = np.append(link_lenghts_ind, np.array(rows[0], dtype=float))
