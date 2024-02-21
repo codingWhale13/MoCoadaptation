@@ -127,8 +127,8 @@ class Coadaptation(object):
 
         ### If you want to start training from a previous model, you will need to provide model path here:
         if self._config['load_model'] and path_to_folder:
-            self._path_to_folder = path_to_folder #'/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/0.6_0.4/Thu_Jan__4_20:03:30_2024__b219b4ae[0.6, 0.4]_3' ###your path to folder of loaded model ###
-            self._last_checkpoint = find_checkpoint(path_to_folder)
+            self._path_to_folder = path_to_folder#'/home/oskar/Thesis/inter/models_vect_batch/results_with_rescaling/set_seed/0.6_0.4/Thu_Jan__4_20_03_30_2024__b219b4ae[0.6,0.4]_3' # path_to_folder # ###your path to folder of loaded model ###
+            self._last_checkpoint = find_checkpoint(path_to_folder) # find_checkpoint(self._path_to_folder) #
             self._last_model_checkpoint = f'checkpoint_design_{self._last_checkpoint}.chk'
             self._last_model_checkpoint = os.path.join(path_to_folder, 'checkpoints', self._last_model_checkpoint)
             morphology_number = str(self._last_checkpoint)  + ".csv"
@@ -388,6 +388,7 @@ class Coadaptation(object):
         if self._config['load_model'] and self._last_model_checkpoint:
             self.load_networks(self._last_model_checkpoint)
             self._env.set_new_design(self._link_lengths)
+            
         self._intial_design_loop(iterations_init)
         self._training_loop(iterations, design_cycles, exploration_strategy)
 
@@ -462,8 +463,9 @@ class Coadaptation(object):
                 for _ in range(iterations):
                     self.single_iteration()
         else:
-            for _ in range(4): # Collect experience during 4 first iterations
+            #for _ in self._env.init_sim_params: # Collect experience during 4 first iterations
                 # Reinforcement Learning
-                self.initialize_episode()
-                for _ in range(iterations):
-                    self.single_iteration()
+            self._design_counter += 1
+            self.initialize_episode()
+            for _ in range(iterations):
+                self.single_iteration()
