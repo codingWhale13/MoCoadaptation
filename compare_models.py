@@ -13,9 +13,9 @@ path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/steered'
 newline=''
 
 #file names for link lenghts etc...
-#save_file_name = 'link_lenght_comparison_batch_vect'
+#save_file_name = 'link_lenght_batch_vect'
 #OR
-save_file_name = 'link_lenght_comparison_batch_vect_steered'
+save_file_name = 'link_lenght_batch_vect_steered'
 
 def get_distinct_colors(n):
 
@@ -67,27 +67,24 @@ def sort_dictionaries(path, loaded = False):
                     directory_keyname = directory_keyname.replace(",", "_")
                 # Go through and save data to dictionaries
                 if os.path.isdir(directorypath2):
-                    total_run_spd_reward = np.array([]) #reset when in new file
-                    total_energy_cons_reward = np.array([])
-                    link_lenghts_ind = np.array([])
+                    total_run_spd_reward = np.array([]) #reset when in new directory
+                    total_energy_cons_reward = np.array([]) 
                     for filename in os.listdir(directorypath2):
                         if filename.endswith(".csv"):
                             filepath = os.path.join(directorypath2, filename)
                             with open(filepath, newline=newline) as file:
                                 reader = csv.reader(file)
                                 rows = [] # list for read values
-                                total_run_spd_reward = np.array([]) #reset when in new directory
-                                total_energy_cons_reward = np.array([])
-                                link_lenghts_ind = np.array([])
+                                link_lenghts_ind = np.array([]) # only the last link length needs to be saved since they are the same between the test run with same model
                                 for row in reader:
                                     rows.append(row)
                                 link_lenghts_ind = np.append(link_lenghts_ind, np.array(rows[0], dtype=float))
                                 total_run_spd_reward = np.append(total_run_spd_reward, np.array(rows[1], dtype=float))
                                 total_energy_cons_reward = np.append(total_energy_cons_reward, np.array(rows[2], dtype=float))
                                 #values to dict
-                                value_mean[directoryname][directory_keyname] = {'running_speed_returns_mean':np.mean(total_run_spd_reward), 'energy_consumption_returns_mean':np.mean(total_energy_cons_reward)}
-                                link_lengths[directoryname][directory_keyname] = link_lenghts_ind
-                                value_std[directoryname][directory_keyname] = {'running_speed_returns_std': np.std(total_run_spd_reward) , 'energy_consumption_returns_std': np.std(total_energy_cons_reward)}
+                    value_mean[directoryname][directory_keyname] = {'running_speed_returns_mean':np.mean(total_run_spd_reward), 'energy_consumption_returns_mean':np.mean(total_energy_cons_reward)}
+                    link_lengths[directoryname][directory_keyname] = link_lenghts_ind
+                    value_std[directoryname][directory_keyname] = {'running_speed_returns_std': np.std(total_run_spd_reward) , 'energy_consumption_returns_std': np.std(total_energy_cons_reward)}
     return value_mean, value_std, link_lengths
 
 
@@ -142,11 +139,13 @@ def scatter_plot():
     #shapes of markers
     marker_shapes = [".", ",", "o", "v", "^", "<", ">", "p", "*", "+", "h", "D", "8", ""]
     #marker_shapes = ["o", "s", "D", "^", "v", "<", ">", "p", "*", "+", "h", ".", "8", ","]
-
+    alp_value = 0.8
+    
     for index, (key1, key2) in enumerate([(key1, key2) for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()]):
         mask = [key_compare == key1 for key_compare in sorted_mean.keys()]
         weight_group = unique_weight_groups[np.where(mask)[0][0]]  # Find the index where the mask is True
-        alp_value = 0.8
+        
+        color = adjusted_color_dict[weight_group]
         #shape = marker_shapes[len(legend_added) % len(marker_shapes)]    
         #_ = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, alpha=alp_value, label=weight_group)   
         if weight_group not in legend_added:
@@ -155,20 +154,20 @@ def scatter_plot():
            legend_added[weight_group] = True
         else:
            sc = ax2.scatter(reward_mean[index, 0], reward_mean[index, 1], s=150, color=adjusted_color_dict[weight_group], marker=shape, alpha=alp_value)
-
+        
+        ax2.errorbar(reward_mean[index, 0], reward_mean[index, 1],
+                     xerr=ci_running_speed[index],
+                     yerr=ci_energy_consumption[index],
+                     fmt='_',
+                     capsize=0,
+                     color=color)
+    ax2.legend()
     ###Add or dont add annotations per model###    
     ###annote the point to scatter plot###
-    # for index, txt in enumerate([key2 for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()]):
-    #    ax2.annotate(txt, (reward_mean[index, 0], reward_mean[index, 1]), textcoords="offset points", xytext=(0, 10), ha='center')
+    for index, txt in enumerate([key2 for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()]):
+        ax2.annotate(txt, (reward_mean[index, 0], reward_mean[index, 1]), textcoords="offset points", xytext=(0, 10), ha='center', alpha=0.8)
     
-    ax2.errorbar(reward_mean[:, 0], reward_mean[:, 1],
-        xerr=ci_running_speed,
-        yerr=ci_energy_consumption,
-        fmt='none', 
-        capsize=0,
-        color='black',
-        label='Error bars')
-    ax2.legend()
+
     
     
 def link_length_plot(save_file : bool = False, save_dir = 'link_length_comparison_results'):
@@ -198,7 +197,7 @@ def link_length_plot(save_file : bool = False, save_dir = 'link_length_compariso
                     marker=dict(color=color),
                     error_y=dict(
                     type='data',
-                    array=[link_lengths_std_array[i, j]],
+                    array=[ci_link_length[i, j]],
                     visible=True,
                     color=color)
                 ))
@@ -238,12 +237,16 @@ def link_length_plot(save_file : bool = False, save_dir = 'link_length_compariso
             pdf_file_path_mean = os.path.join(save_dir, f'Link_length_{j + 1}_mean_values_{save_file_name.split("_")[-1]}_.pdf')
             figm.write_image(pdf_file_path_mean, format='pdf')
             print(f'Figure saved as {pdf_file_path_mean}')
-            
-        figm.show() # uncomment to see the plots 
-        figv.show() # uncomment to see the plots 
+            #save the values as pdf
+            pdf_file_path_values = os.path.join(save_dir, f'Link_length_{j + 1}_values_{save_file_name.split("_")[-1]}_.pdf')
+            figv.write_image(pdf_file_path_values, format='pdf')
+            print(f'Figure saved as {pdf_file_path_values}')
+        #figm.show() # uncomment to see the plots 
+        #figv.show() # uncomment to see the plots 
 
 if __name__ == "__main__":
     
+    sample_count = 5 # ADD how many samples you have (test runs per model weight and seed) or (test runs per loaded model and weight (at least for now the seed isnt considered))
     value_mean, value_std, link_lengths = sort_dictionaries(path, True) # If you're analysing models trained with pre-trained model, pass 'True' else 'False'
     # Sort dictionaries based on keys
     sorted_mean = dict(sorted(value_mean.items(), key=lambda item: convert_key_to_tuple(item[0])))
@@ -275,10 +278,13 @@ if __name__ == "__main__":
     
     #Set condidence inverval
     confidency_interval = 1.96 #3.89 #1.96#2.5576 #1.96  # Give confidence interval
-    ci_running_speed = confidency_interval * (np.array([reward_std[i][0] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
-    ci_energy_consumption = confidency_interval * (np.array([reward_std[i][1] for i in range(len(reward_std))]) / np.sqrt(len(reward_std)))
+    ci_running_speed = confidency_interval * (np.array([reward_std[i][0] for i in range(len(reward_std))]) / np.sqrt(sample_count))  # sample size is 5 since we have 5 different test runs  #np.sqrt(len(reward_std)))
+    ci_energy_consumption = confidency_interval * (np.array([reward_std[i][1] for i in range(len(reward_std))]) / np.sqrt(sample_count))
     
-    bar_plot(True)
+    sem_link_length = link_lengths_std_array / np.sqrt(7) #5 for vect or 7 for steered models per weight # sample size (amount of trained models per weight and seed) -> regular model or (trained models per loaded weight in weight) -> loaded model
+    ci_link_length = confidency_interval * sem_link_length
+    
+    bar_plot(True) # Set True if model is steered and False if not
     scatter_plot()
     if save_file_name:
         link_length_plot(True, save_file_name)
