@@ -12,11 +12,14 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/0.99_0.01/Sat_Dec_23_15:02:39_2023__fda64079[0.99, 0.01]_4' 
+#path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/0.7_0.3/Thu_Jan__4_19:47:45_2024__139ccee8[0.7, 0.3]_1' 
+path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test/0.1_0.9/Tue_Jan__9_22:20:46_2024__e01606ba[0.1, 0.9]_3'
+
+
 seed = path_to_folder[-1]
 newline=''
 
-experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
+experiment_config = experiment_configs.sac_pso_batch #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here
 project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
 run_name = "test" #"0, 1, 5"#"1, 0, 7"
@@ -83,7 +86,7 @@ if __name__ == "__main__":
     file_str = './' + folder + '/' + '__' + rand_id + "_" + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
     experiment_config['data_folder_experiment'] = file_str # MORL
 
-    #Create directory when not using video recording, turn off when you do, sloppy I know
+    #Create directory when not using video recording
     if not os.path.exists(file_str):
       os.makedirs(file_str)
 

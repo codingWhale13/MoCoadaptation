@@ -10,19 +10,18 @@ import numpy as np
 
 ##### IMPORTANT if you want to use this testing you cannot use the render or video capture feature in the 'experiment_configs.py' #####
 
+#DOES NOT WORK PROPERLY WITH VIDEO SAVING#
+
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 # -> set_seed/<weight folder name>/<model_name>
 
 #change <insert> to priori or inter based what you use or rename the folders '/Thesis/<insert>/ rest of the path
 
-path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test'#'/home/oskar/Thesis/priori/Model_scalarized/results_with_rescaling/set_seed/test' # in path_to_folder have models in folders per each unique weight
-#/home/oskar/Thesis/inter/models/results_with_rescaling/set_seed/test
-#/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test
-
+path_to_folder = '/home/oskar/Thesis/priori/Model_scalarized_batch/results_with_rescaling/set_seed/test' # in path_to_folder have models in folders per each unique weight
 
 newline=''
-experiment_config = experiment_configs.sac_pso_sim #MORL dictiornary need for batch or sim
+experiment_config = experiment_configs.sac_pso_batch #MORL dictiornary need for batch or sim
 weight_index = 5 # dummy value for creating the class, we dont update the network so the weight doesnt matter here
 project_name = "test" #"coadapt-scaled-test"#"coadapt-testing-scaling-tests"
 run_name = "test" #"0, 1, 5"#"1, 0, 7"
@@ -98,11 +97,11 @@ def testing(model_path, count, save_returns_mode):
     #rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     model_name = model_path.split('/')[-1:]
     model_name = str(model_name[0])
-    file_str = './' + folder + '/' + '__' + model_name + '_chkpnt_' + str(last_model_checkpoint_num) + '_run_' + str(count+1)
-    #file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num) + '_' + str(count) # ORIG
+    #file_str = './' + folder + '/' + '__' + model_name + '_chkpnt_' + str(last_model_checkpoint_num) + '_run_' + str(count+1)
+    file_str = './' + folder + '/' + model_name
     experiment_config['data_folder_experiment'] = file_str # MORL
     
-    #Create directory when not using video recording, turn off when you do, sloppy I know
+    #Create directory for files
     if not os.path.exists(file_str):
         os.makedirs(file_str)
         
@@ -125,7 +124,7 @@ def testing(model_path, count, save_returns_mode):
     with open(
             os.path.join(file_path,
                 #'episodic_rewards_run_{}.csv'.format(run_name)
-                '{}{}.csv'.format(file_name, run_name)
+                '{}{}_{}.csv'.format(file_name, run_name, str(count+1))
                 ), 'w') as fd:
         #simulate the model
         
@@ -167,7 +166,7 @@ if __name__ == "__main__":
 
     # Turn to True IF you want to save episodic returns, 
     # Turn to False when saving states and actions to csv file
-    save_mode = True # True to episodic returns, False to states and actions
+    save_mode = False # True to episodic returns, False to states and actions
     test = 1 # Amount of test runs done per model
     print(f"***Running {test} tests per each model***")
     run_tests(test, save_mode)
