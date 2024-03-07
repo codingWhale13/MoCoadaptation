@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 ### NEW VERSION ###
 
 #path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/vect'
-path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/steered'
+path='/home/oskar/Thesis/inter/model_comparison_results_batch_inter/steered_separated'
 
 newline=''
 
@@ -62,9 +62,11 @@ def sort_dictionaries(path, loaded = False):
                     directory_keyname = directory_keyname[0].replace("]", "_").replace(", ", "_") # This line could lead to problems when checking results with vectorized models, since their model names dont have a space there in the naming
                 else:
                     directory_keyname = directoryname2.split('__')[:]
+                    seed = directory_keyname[1].split('_')[-1]
                     directory_keyname = directory_keyname[1].split('[')[:]
                     directory_keyname = directory_keyname[0][:-1]
                     directory_keyname = directory_keyname.replace(",", "_")
+                    directory_keyname = directory_keyname + '_' + seed
                 # Go through and save data to dictionaries
                 if os.path.isdir(directorypath2):
                     total_run_spd_reward = np.array([]) #reset when in new directory
@@ -112,6 +114,7 @@ def bar_plot(steered : bool = False):
     ax.set_ylabel('Mean sums')
     ax.set_title('Mean episodic returns for each weight of Running Speed and Energy Consumption for Each Weight')
     ax.set_xticks(index)
+    
     if steered:
         ax.set_xticklabels([f"{key2}->{key1}" for key1 in sorted_mean.keys() for key2 in sorted_mean[key1].keys()], rotation=45, ha='right') #ADD both keys to names
     else:
@@ -137,7 +140,8 @@ def scatter_plot():
     legend_added = {} # keep track of added legends for weight groups
 
     #shapes of markers
-    marker_shapes = [".", ",", "o", "v", "^", "<", ">", "p", "*", "+", "h", "D", "8", ""]
+    #marker_shapes = [".", ",", "o", "v", "^", "<", ">", "p", "*", "+", "h", "D", "8", ""]
+    marker_shapes = [".", ",", "o", "v", "^", "<", ">", "p", "*", "+", "h", "H", "D", "d", "8", "s", "x", "|", "_"]
     #marker_shapes = ["o", "s", "D", "^", "v", "<", ">", "p", "*", "+", "h", ".", "8", ","]
     alp_value = 0.8
     
@@ -161,6 +165,7 @@ def scatter_plot():
                      fmt='_',
                      capsize=0,
                      color=color)
+        
     ax2.legend()
     ###Add or dont add annotations per model###    
     ###annote the point to scatter plot###
@@ -281,13 +286,13 @@ if __name__ == "__main__":
     ci_running_speed = confidency_interval * (np.array([reward_std[i][0] for i in range(len(reward_std))]) / np.sqrt(sample_count))  # sample size is 5 since we have 5 different test runs  #np.sqrt(len(reward_std)))
     ci_energy_consumption = confidency_interval * (np.array([reward_std[i][1] for i in range(len(reward_std))]) / np.sqrt(sample_count))
     
-    sem_link_length = link_lengths_std_array / np.sqrt(7) #5 for vect or 7 for steered models per weight # sample size (amount of trained models per weight and seed) -> regular model or (trained models per loaded weight in weight) -> loaded model
+    sem_link_length = link_lengths_std_array / np.sqrt(14) # if done together then its 14 #5 for vect or 7 for steered models per weight # sample size (amount of trained models per weight and seed) -> regular model or (trained models per loaded weight in weight) -> loaded model
     ci_link_length = confidency_interval * sem_link_length
     
     bar_plot(True) # Set True if model is steered and False if not
     scatter_plot()
     if save_file_name:
-        link_length_plot(True, save_file_name)
+        link_length_plot(False, save_file_name)
     else:
         link_length_plot(False)
     plt.show(block=True)

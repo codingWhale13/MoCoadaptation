@@ -11,8 +11,9 @@ import numpy as np
 # put path to folder of model here, seed, weight and model folder name, aka last three parts from path
 # example -> set_seed/0.0_1.0/Thu_Dec__7_20:55:59_2023__0f1677df[0.0, 1.0]
 
-#path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/0.7_0.3/Thu_Jan__4_20:03:30_2024__c6d9d6f1[0.7, 0.3]_1' 
-path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/steered/0.0_1.0/Tue_Jan__9_22:09:04_2024__a50b85bd[0.0, 1.0]_1'
+path_to_folder = '/home/oskar/Thesis/inter/models_vect_batch/set_seed/1.0_0.0/Sat_Jan_20_00:32:43_2024__9edd48b0[1.0,0.0]_5' 
+#path_to_folder = '/home/oskar/Thesis/inter/models_vect_batch/steered/1.0_0.0/Wed_Feb_21_18:37:08_2024__0.9,0.1_3_[1.0,0.0]_3'
+#'/home/oskar/Thesis/inter/models_vect_batch/steered/0.9_0.1/Wed_Feb_21_18:10:59_2024__1.0,0.0_3_[0.9,0.1]_3'
 
 seed = path_to_folder[-1]
 newline=''
@@ -79,10 +80,11 @@ if __name__ == "__main__":
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     model_name = path_to_folder.split('/')[-1:]
     model_name = str(model_name[0])
-    file_str = './' + folder + '/' + '__' + rand_id + '_' + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed)
+    file_str = './' + folder + '/'  + model_name + '_test_' + str(last_model_checkpoint_num) + "_" + str(seed) # + '__' + rand_id + '_' # no need for these, 
+    #if you multiple test of the same model then you need changes in names of the files or previous folder will be overwritten, just add the part between model name and test!!!! 
     experiment_config['data_folder_experiment'] = file_str # MORL
 
-    #Create directory when not using video recording, turn off when you do, sloppy I know
+    #Create directory when not using video recording
     if not os.path.exists(file_str):
       os.makedirs(file_str)
 

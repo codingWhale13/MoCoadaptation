@@ -16,7 +16,11 @@ import numpy as np
 
 #change <insert> to priori or inter based what you use or rename the folders '/Thesis/<insert>/ rest of the path
 
-path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/test'# in path_to_folder have models in folders per each unique weight
+#path_to_folder = '/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/test'# in path_to_folder have models in folders per each unique weight
+
+path_to_folder = '/home/oskar/Thesis/inter/models_vect_batch/steered' #'/home/oskar/Thesis/inter/models_batch/results_with_rescaling/set_seed/test'
+#OR
+#path_to_folder = '/home/oskar/Thesis/inter/models_vect_batch/set_seed'
 
 
 newline=''
@@ -93,16 +97,14 @@ def testing(model_path, count, save_returns_mode):
     print(f"Link lenghts: {link_lengths}")
     
     folder = experiment_config['data_folder'] #MORL
-    #rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
     model_name = model_path.split('/')[-1:]
     model_name = str(model_name[0])
-    file_str = './' + folder + '/' + '__' + model_name + '_chkpnt_' + str(last_model_checkpoint_num) + '_run_' + str(count+1)
-    #file_str = './' + folder + '/' + time.ctime().replace(' ', '_') + '__' + rand_id + '_test_' + str(last_model_checkpoint_num) + '_' + str(count) # ORIG
-    experiment_config['data_folder_experiment'] = file_str # MORL
-    
-    #Create directory when not using video recording, turn off when you do, sloppy I know
+    #file_str = './' + folder + '/' + '__' + model_name + '_chkpnt_' + str(last_model_checkpoint_num) #+ '_run_' + str(count+1)
+    file_str = './' + folder + '/' + model_name
+    #Create directory when not using video recording
     if not os.path.exists(file_str):
         os.makedirs(file_str)
+    experiment_config['data_folder_experiment'] = file_str # MORL
         
     #initiliaze the class
     coadapt_test = coadapt.Coadaptation(experiment_config, weight_index, project_name, run_name)
@@ -123,7 +125,7 @@ def testing(model_path, count, save_returns_mode):
     with open(
             os.path.join(file_path,
                 #'episodic_rewards_run_{}.csv'.format(run_name)
-                '{}{}.csv'.format(file_name, run_name)
+                '{}{}_{}.csv'.format(file_name, run_name, str(count+1))
                 ), 'w') as fd:
         #simulate the model
         
@@ -166,6 +168,6 @@ if __name__ == "__main__":
     # Turn to True IF you want to save episodic returns, 
     # Turn to False when saving states and actions to csv file
     save_mode = True # True to episodic returns, False to states and actions
-    test = 1 # Amount of test runs done per model
+    test = 5 # Amount of test runs done per model
     print(f"***Running {test} tests per each model***")
     run_tests(test, save_mode)
