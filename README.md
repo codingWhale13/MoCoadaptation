@@ -34,6 +34,8 @@ of design parameters during the training process."
 
 Read Luck's reposity for the instrutions on installation. In this repository, there's a requirement.txt that has the needed modules.
 
+## Branches
+'main' is the priori scalarized returns and 'interactive' is vectorized Q-function with priori scalarized returns.
 
 ## Videos
 
@@ -56,7 +58,3 @@ Vectorized with bootstrapping:
 
 [0.3-1.0_bootstrapped_seed_1](https://vimeo.com/924968081?share=copy),
 [0.3-1.0_bootstrapped_seed_3](https://vimeo.com/924969157?share=copy)
-
-
-
-
