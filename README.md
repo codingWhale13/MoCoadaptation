@@ -35,7 +35,12 @@ of design parameters during the training process."
 Read Luck's reposity for the instrutions on installation. In this repository, there's a requirement.txt that has the needed modules.
 
 ## Branches
-'main' is the priori scalarized returns and 'interactive' is vectorized Q-function with priori scalarized returns.
+
+### MoCoadaptation
+'main' is the priori scalarized returns and 'interactive' is vectorized Q-values with priori scalarization. 
+
+### rlkitMO
+The rlkit repository [rlkitMO](https://github.com/psyberprimate/rlkitMO) is forked from [rlkit](https://github.com/rail-berkeley/rlkit) and the changes required to SAC are there. The branch 'coadapt' is for priori scalarized returns and 'coadapt_interactive' is for vectorized Q-values.
 
 ## Videos
 
