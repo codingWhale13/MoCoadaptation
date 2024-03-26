@@ -40,11 +40,11 @@ Read Luck's reposity for the instrutions on installation. In this repository, th
 ###Chapter 3 videos
 
 PSO sim:
-[0.0-0.4_priori_sim](https://vimeo.com/915549793?share=copy)
+[0.0-0.4_priori_sim](https://vimeo.com/915549793?share=copy),
 [0.5-1.0_priori_sim](https://vimeo.com/915549793?share=copy)
 
 PSO batch:
-[0.0-0.4_priori_batch](https://vimeo.com/915549753?share=copy)
+[0.0-0.4_priori_batch](https://vimeo.com/915549753?share=copy),
 [0.5-1.0_priori_batch](https://vimeo.com/915549772?share=copy)
 
 ###Chapter 4 videos
@@ -54,7 +54,7 @@ Vectorized:
 
 Vectorized with bootstrapping:
 
-[0.3-1.0_bootstrapped_seed_1](https://vimeo.com/924968081?share=copy)
+[0.3-1.0_bootstrapped_seed_1](https://vimeo.com/924968081?share=copy),
 [0.3-1.0_bootstrapped_seed_3](https://vimeo.com/924969157?share=copy)
 
 
