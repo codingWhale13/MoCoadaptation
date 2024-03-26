@@ -16,7 +16,7 @@ If you use this code in your research, please cite
 ```
 
 ## Acknowledgements of Previous Work
-The work is based heavily on the previous work of Luck. Many thanks to him and the rest. You should definitely read his repository page. By his own words:
+The work is heavily based on the previous work of Luck. Many thanks to him and the rest. You should definitely read his repository page. By his own words:
 
 "This project would have been harder to implement without the great work of
 the developers behind rlkit and pybullet.
