@@ -1,5 +1,5 @@
 # Multi-objective Fast Evolution through Actor-Critic Reinforcement Learning
-This repository is orignally from: https://github.com/ksluck/Coadaptation
+This repository is originally from: https://github.com/ksluck/Coadaptation
 
 The original paper was presented in [**Data-efficient Co-Adaptation of Morphology and Behaviour with Deep Reinforcement Learning**](https://research.fb.com/publications/data-efficient-co-adaptation-of-morphology-and-behaviour-with-deep-reinforcement-learning/).
 This paper was presented on the Conference on Robot Learning in 2019.
