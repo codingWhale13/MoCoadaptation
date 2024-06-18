@@ -52,12 +52,16 @@ def parse_args():
         help="Whether or not training should be logged with wandb",
         default=False,
     )
+    parser.add_argument(
+        "--initial-model-path",
+        type=str,
+        help="If specified, loads model at beginning of training (bootstrapping)",
+    )
 
     return parser.parse_args()
 
 
 def main(config):
-    project_name = config["project_name"]
     weight_index = config["weight_index"]
     use_wandb = config["use_wandb"]
 
@@ -109,6 +113,8 @@ if __name__ == "__main__":
     config["weight_index"] = args.weight_index
     config["seed"] = args.seed
     config["use_wandb"] = args.use_wandb
+    config["initial_model_path"] = args.initial_model_path
+    config["load_model"] = args.initial_model_path is not None
 
     print(json.dumps(config, sort_keys=True, indent=4))
 

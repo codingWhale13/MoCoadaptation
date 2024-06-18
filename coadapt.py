@@ -14,6 +14,38 @@ from RL.evoreplay import EvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 
 
+def find_checkpoint(path_to_directory):
+    """Find the checkpoint for the model
+
+    Returns: returns the int value of the last checkpoint or None
+    """
+    checkpoints = []
+    for file in os.listdir(path_to_directory):
+        if file.endswith(".csv"):
+            checkpoint = int(file.split("_")[-1][:-4])
+            checkpoints.append(checkpoint)
+    if checkpoints:
+        return max(checkpoints)
+    else:
+        return None
+
+
+def read_morphology(path, checkpoint) -> list:
+    """Returns a list of values read from cvs file per row
+
+    Returns: a list containing csv file values
+    """
+    rows = []
+    for filename in os.listdir(path):
+        if filename.endswith(checkpoint):
+            filepath = os.path.join(path, filename)
+            with open(filepath, newline="") as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    rows.append(row)
+    return rows
+
+
 def select_env(env_name):
     if env_name == "HalfCheetah":
         return HalfCheetahEnvMO
@@ -42,14 +74,35 @@ class Coadaptation:
         project_name = config["project_name"]
         run_name = config["run_name"]
         weight_index = config["weight_index"]
-        self.use_wandb = config["use_wandb"]
+        initial_model_path = self._config["initial_model_path"]
+
+        self._use_wandb = config["use_wandb"]
         self._use_gpu = config["use_gpu"]
 
-        if self.use_wandb:
+        if self._use_wandb:
             wandb.init(project=project_name, name=run_name)
 
         self._config = config
         utils.move_to_cuda(self._config)
+
+        ### If you want to start training from a previous model, you will need to provide model path here:
+        self._last_model_checkpoint = None
+        if initial_model_path is not None:
+            self._path_to_folder = initial_model_path  #'/home/oskar/Thesis/inter/models_vect_batch/results_with_rescaling/set_seed/0.6_0.4/Thu_Jan__4_20_03_30_2024__b219b4ae[0.6,0.4]_3' # path_to_folder # ###your path to folder of loaded model ###
+            self._last_checkpoint = find_checkpoint(initial_model_path)
+            self._last_model_checkpoint = (
+                f"checkpoint_design_{self._last_checkpoint}.chk"
+            )
+            self._last_model_checkpoint = os.path.join(
+                initial_model_path, "checkpoints", self._last_model_checkpoint
+            )
+            morphology_number = str(self._last_checkpoint) + ".csv"
+            model_file = read_morphology(
+                initial_model_path, morphology_number
+            )  # read model csv file as list
+            self._link_lengths = np.array(
+                model_file[1], dtype=float
+            )  # index link lengths from the file
 
         self._episode_length = self._config["steps_per_episodes"]
 
@@ -84,7 +137,7 @@ class Coadaptation:
             replay=self._replay,
             networks=self._networks,
             weight_pref=self._weights_pref,
-            wandb_instance=wandb.run if self.use_wandb else None,
+            wandb_instance=wandb.run if self._use_wandb else None,
             use_gpu=self._use_gpu,
         )
         if self._use_gpu:
@@ -106,7 +159,9 @@ class Coadaptation:
         self._last_single_iteration_time = 0
         self._design_counter = 0
         self._episode_counter = 0
-        self._data_design_type = "Initial"
+        self._data_design_type = (
+            "Initial" if initial_model_path is None else "Pre-trained"
+        )
 
     def initialize_episode(self):
         """Initializations required before the first episode.
@@ -265,7 +320,7 @@ class Coadaptation:
         self._states.append(states_arr)
         self._actions.append(actions_arr)
 
-        if self.use_wandb:
+        if self._use_wandb:
             # save episodic reward
             r1, r2 = reward_ep
             wandb.log({"Reward run": r1, "Reward energy consumption": r2})
@@ -340,7 +395,7 @@ class Coadaptation:
             cwriter.writerow([reward[0] for reward in self._data_rewards])
             cwriter.writerow([reward[1] for reward in self._data_rewards])
 
-        if self.use_wandb:
+        if self._use_wandb:
             # save rewards and current design
             wandb.log({"Rewards": self._data_rewards, "Current design": current_design})
 
@@ -357,6 +412,10 @@ class Coadaptation:
         iterations = self._config["iterations"]
         design_cycles = self._config["design_cycles"]
         exploration_strategy = self._config["exploration_strategy"]
+
+        if self._last_model_checkpoint is not None:
+            self.load_networks(self._last_model_checkpoint)
+            self._env.set_new_design(self._link_lengths)
 
         self._intial_design_loop(iterations_init)
         self._training_loop(iterations, design_cycles, exploration_strategy)
@@ -440,11 +499,18 @@ class Coadaptation:
 
         """
         self._data_design_type = "Initial"
-        for params in self._env.init_sim_params:
-            self._design_counter += 1
-            self._env.set_new_design(params)
-            self.initialize_episode()
 
-            # Reinforcement Learning
+        if self._config["load_model"]:
+            self._design_counter += 1
+            self.initialize_episode()
             for _ in range(iterations):
                 self.single_iteration()
+        else:
+            for params in self._env.init_sim_params:
+                self._design_counter += 1
+                self._env.set_new_design(params)
+                self.initialize_episode()
+
+                # Reinforcement Learning
+                for _ in range(iterations):
+                    self.single_iteration()
