@@ -12,7 +12,7 @@ from .rl_algorithm import RL_algorithm
 
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
-    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance):
+    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance, use_gpu=True):
         """Bascally a wrapper class for rlkit.torch.sac.sac.SoftActorCritic
 
         Args:
@@ -56,6 +56,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
             wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            use_gpu=use_gpu,
             **self._variant_spec,
         )
 

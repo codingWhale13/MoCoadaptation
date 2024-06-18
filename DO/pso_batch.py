@@ -60,11 +60,8 @@ class PSOBatch(DesignOptimization):
                     ) = policy_network(network_input, deterministic=True)
                     output = q_network(network_input, action)
                     if output.shape[1] != 1:
-                        print("MORL >>> output/weights", output, weights)
                         loss = -torch.matmul(output, weights).mean()
-                        print(">>>>> ", loss)
                     else:
-                        print("NEVER PRINTED")
                         loss = -output.mean()
                     fval = float(loss.item())
                     cost[i] = fval

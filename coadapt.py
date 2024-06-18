@@ -43,11 +43,13 @@ class Coadaptation:
         run_name = config["run_name"]
         weight_index = config["weight_index"]
         self.use_wandb = config["use_wandb"]
+        self._use_gpu = config["use_gpu"]
 
         if self.use_wandb:
             wandb.init(project=project_name, name=run_name)
 
         self._config = config
+        utils.move_to_cuda(self._config)
 
         self._episode_length = self._config["steps_per_episodes"]
 
@@ -83,8 +85,9 @@ class Coadaptation:
             networks=self._networks,
             weight_pref=self._weights_pref,
             wandb_instance=wandb.run if self.use_wandb else None,
+            use_gpu=self._use_gpu,
         )
-        if self._config["use_gpu"]:
+        if self._use_gpu:
             utils.move_to_cuda(self._config)
         else:
             utils.move_to_cpu()
@@ -168,7 +171,7 @@ class Coadaptation:
                 self._networks["individual"]
             )
 
-        if self._config["use_gpu"]:
+        if self._use_gpu:
             self._policy_cpu = policy_gpu_ind
             utils.move_to_cuda(self._config)
         else:
@@ -176,7 +179,7 @@ class Coadaptation:
                 network_to=self._policy_cpu,
                 network_from=policy_gpu_ind,
                 config=self._config,
-                force_cpu=not self._config["use_gpu"],
+                force_cpu=True,
             )
             utils.move_to_cpu()
 
@@ -226,7 +229,7 @@ class Coadaptation:
             policy_gpu_ind = self._rl_algo_class.get_policy_network(
                 self._networks["individual"]
             )
-        if self._config["use_gpu"]:
+        if self._use_gpu:
             self._policy_cpu = policy_gpu_ind
             utils.move_to_cuda(self._config)
         else:
@@ -234,7 +237,7 @@ class Coadaptation:
                 network_to=self._policy_cpu,
                 network_from=policy_gpu_ind,
                 config=self._config,
-                force_cpu=not self._config["use_gpu"],
+                force_cpu=True,
             )
             utils.move_to_cpu()
 

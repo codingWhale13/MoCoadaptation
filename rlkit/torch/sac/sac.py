@@ -35,6 +35,7 @@ class SACTrainer(TorchTrainer):
         use_automatic_entropy_tuning=True,
         target_entropy=None,
         alpha=1.0,
+        use_gpu=False,
         # weight_pref = torch.tensor([0.5, 0.5]).reshape(2, 1).to("cuda")# np.array([0.5, 0.5]) # MORL weights # update
         # weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
     ):
@@ -91,8 +92,9 @@ class SACTrainer(TorchTrainer):
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
         self._need_to_update_eval_statistics = True
+        self._use_gpu = use_gpu
 
-    def train_from_torch(self, batch, cuda=False):
+    def train_from_torch(self, batch):
         rewards = batch["rewards"]
         terminals = batch["terminals"]
         obs = batch["observations"]
@@ -147,16 +149,16 @@ class SACTrainer(TorchTrainer):
         # w = self.weight_pref.repeat(int(len(rewards)/2), 1).to("cuda")
         # SORL #q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
         # q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
-        if cuda:
+        if self._use_gpu:
             q_target = (
                 self.reward_scale * torch.matmul(rewards, self.weight_pref).to("cuda")
                 + (1.0 - terminals) * self.discount * target_q_values
-            )  ##ugly fix???#
+            )
         else:
             q_target = (
                 self.reward_scale * torch.matmul(rewards, self.weight_pref)
                 + (1.0 - terminals) * self.discount * target_q_values
-            )  ##ugly fix???#
+            )
         # q_target = self.reward_scale * torch.multiply(rewards, w) + (1. - terminals) * self.discount * target_q_values # torch.multiply(rewards, self.weight_pref.repeat(len(rewards), 1)) + (1. - terminals) * self.discount * target_q_values  #torch.multiply(rewards, self.weight_pref)
         # q_target = np.dot(q_target, self.weight_pref) # MORL weights # ERROR  # ADDED
 
