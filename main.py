@@ -1,75 +1,115 @@
-import os, sys, time
+import argparse
+from datetime import datetime
 import hashlib
-import coadapt
-import experiment_configs as cfg
 import json
-import wandb
-import torch
-import numpy as np
+import os
 import random
 
+import numpy as np
+import torch
+import wandb
 
-def main(config_name, weight_index):
-    # Random seeding
+import coadapt
+import experiment_configs
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--config-name",
+        type=str,
+        help="Type of experiment (choose 'sac_pso_batch' or 'sac_pso_sim')",
+        choices=("sac_pso_batch", "sac_pso_sim"),
+        default="sac_pso_sim",
+    )
+    parser.add_argument(
+        "--weight-index",
+        type=int,
+        help="Weight index to use (0, 1, ..., 10)",
+        choices=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+        default=0,
+    )
+    parser.add_argument(
+        "--project-name",
+        type=str,
+        help="Name to identify the project",
+        default="Co-Adaptation",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        help="Name to identify the run",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for reproducibility (if None, random seed is used)",
+    )
+    parser.add_argument(
+        "--use-wandb",
+        type=bool,
+        help="Whether or not training should be logged with wandb",
+        default=False,
+    )
+
+    return parser.parse_args()
+
+
+def main(config):
+    project_name = config["project_name"]
+    weight_index = config["weight_index"]
+    use_wandb = config["use_wandb"]
+
+    # random seeding
+    seed = config["seed"]
     if seed is None:
-        print(f"Custom seed set not set, using random seed")
-    else:
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        print(f"Custom seed set: {seed}")
+        seed = random.randint(0, 2**32 - 1)
+        config["seed"] = seed  # save generated seed to config
+        print(f"Custom seed set not set, using random seed {seed}")
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    print(f"Custom seed set: {seed}")
 
-    # Create foldr in which to save results
-    folder = config_name["data_folder"]
-    # generate random hash string - unique identifier if we start
-    # multiple experiments at the same time
-    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+    # generate unique experiment name and create folder if not exists
+    data_folder = config["data_folder"]
+    timestamp = datetime.now().replace(microsecond=0).isoformat().replace(":", "-")
+    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]  # unique identifier
+    weight_str = "-".join([str(i) for i in config["weights"][weight_index]])
+    exp_id = f"run_{timestamp}_{rand_id}_{weight_str}"
+    data_folder_experiment = os.path.join(data_folder, exp_id)
+    config["data_folder_experiment"] = data_folder_experiment
+    if not os.path.exists(data_folder_experiment):
+        os.makedirs(data_folder_experiment)
 
-    file_str = f"./{folder}/{time.ctime().replace(' ', '_')}__{rand_id}{str(config_name['weights'][weight_index])}"
-    if seed is not None:
-        file_str += f"_{seed}"
+    # store config
+    with open(os.path.join(data_folder_experiment, "config.json"), "w") as fd:
+        fd.write(json.dumps(config, indent=2))
 
-    config_name["data_folder_experiment"] = file_str
-    # Create experiment folder
-    if not os.path.exists(file_str):
-        os.makedirs(file_str)
-    # Store config
-    with open(os.path.join(file_str, "config.json"), "w") as fd:
-        fd.write(json.dumps(config_name, indent=2))
-
-    # Start training
-    co = coadapt.Coadaptation(config_name, weight_index, project_name, run_name)
+    # start training
+    co = coadapt.Coadaptation(config)
     co.run()
-    # wandb.finish()
+
+    if use_wandb:
+        wandb.finish()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 5:
-        config_name = cfg.config_dict[sys.argv[1]]
-        weight_index = int(sys.argv[2])
-        project_name = sys.argv[3]
-        run_name = sys.argv[4]
-        seed = int(sys.argv[5])
-        print(run_name)
-        print(project_name)
-        print(f"index w : {weight_index}")
-        print(config_name["weights"][weight_index])
-    elif len(sys.argv) > 4:
-        config_name = cfg.config_dict[sys.argv[1]]
-        weight_index = int(sys.argv[2])
-        project_name = sys.argv[3]
-        run_name = sys.argv[4]
-        seed = False
-        print(run_name)
-        print(project_name)
-        print(f"index w : {weight_index}")
-        print(config_name["weights"][weight_index])
-    else:
-        # config_name = cfg.config_dict['sac_pso_sim']
-        config_name = cfg.config_dict["sac_pso_sim"]
-        weight_index = 0
-        seed = False
-        project_name = "coadapt-save-testing"
-        run_name = f"default-run-weight-{config_name['weights'][weight_index]}"
-        print(config_name["weights"][weight_index])
-    main(config_name, weight_index)
+    args = parse_args()
+
+    config = experiment_configs.config_dict[args.config_name]
+
+    run_name = args.run_name
+    if run_name is None:
+        run_name = f"default-run-weight-{config['weights'][args.weight_index]}"
+
+    config["project_name"] = args.project_name
+    config["run_name"] = args.run_name
+    config["weight_index"] = args.weight_index
+    config["seed"] = args.seed
+    config["use_wandb"] = args.use_wandb
+
+    print(json.dumps(config, sort_keys=True, indent=4))
+
+    main(config)

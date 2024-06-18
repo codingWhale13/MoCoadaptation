@@ -9,44 +9,39 @@ import rlkit.torch.pytorch_util as ptu
 from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
-#import wandb # for logging loss fpr QF1, QF2 and policy loss
+# import wandb # for logging loss fpr QF1, QF2 and policy loss
+
 
 class SACTrainer(TorchTrainer):
     def __init__(
-            self,
-            env,
-            policy,
-            qf1,
-            qf2,
-            target_qf1,
-            target_qf2,
-            
-            weight_pref, # for MORL
-            wandb_instance, # for MORL
-
-            discount=0.99,
-            reward_scale=1.0,
-
-            policy_lr=1e-3,
-            qf_lr=1e-3,
-            optimizer_class=optim.Adam,
-
-            soft_target_tau=1e-2,
-            target_update_period=1,
-            plotter=None,
-            render_eval_paths=False,
-
-            use_automatic_entropy_tuning=True,
-            target_entropy=None,
-            alpha=1.0,
-            
-            #weight_pref = torch.tensor([0.5, 0.5]).reshape(2, 1).to("cuda")# np.array([0.5, 0.5]) # MORL weights # update
-            #weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
+        self,
+        env,
+        policy,
+        qf1,
+        qf2,
+        target_qf1,
+        target_qf2,
+        weight_pref,  # for MORL
+        wandb_instance,  # for MORL
+        discount=0.99,
+        reward_scale=1.0,
+        policy_lr=1e-3,
+        qf_lr=1e-3,
+        optimizer_class=optim.Adam,
+        soft_target_tau=1e-2,
+        target_update_period=1,
+        plotter=None,
+        render_eval_paths=False,
+        use_automatic_entropy_tuning=True,
+        target_entropy=None,
+        alpha=1.0,
+        # weight_pref = torch.tensor([0.5, 0.5]).reshape(2, 1).to("cuda")# np.array([0.5, 0.5]) # MORL weights # update
+        # weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
     ):
         super().__init__()
-        self.weight_pref = weight_pref # MORL weights
-        #self.wandb_ins = wandb_instance # for passing values to wandb when wandb is initilized in coadapt class # MORL # uncomment to track
-        
+        self.weight_pref = weight_pref  # MORL weights
+        # self.wandb_ins = wandb_instance # for passing values to wandb when wandb is initilized in coadapt class # MORL # uncomment to track
+
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -61,7 +56,9 @@ class SACTrainer(TorchTrainer):
             if target_entropy:
                 self.target_entropy = target_entropy
             else:
-                self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
+                self.target_entropy = -np.prod(
+                    self.env.action_space.shape
+                ).item()  # heuristic value from Tuomas
             self.log_alpha = ptu.zeros(1, requires_grad=True)
             self.alpha_optimizer = optimizer_class(
                 [self.log_alpha],
@@ -96,20 +93,24 @@ class SACTrainer(TorchTrainer):
         self._need_to_update_eval_statistics = True
 
     def train_from_torch(self, batch, cuda=False):
-        rewards = batch['rewards']
-        terminals = batch['terminals']
-        obs = batch['observations']
-        actions = batch['actions']
-        next_obs = batch['next_observations']
+        rewards = batch["rewards"]
+        terminals = batch["terminals"]
+        obs = batch["observations"]
+        actions = batch["actions"]
+        next_obs = batch["next_observations"]
 
         """
         Policy and Alpha Loss
         """
         new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs, reparameterize=True, return_log_prob=True,
+            obs,
+            reparameterize=True,
+            return_log_prob=True,
         )
         if self.use_automatic_entropy_tuning:
-            alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
+            alpha_loss = -(
+                self.log_alpha * (log_pi + self.target_entropy).detach()
+            ).mean()
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
             self.alpha_optimizer.step()
@@ -122,7 +123,7 @@ class SACTrainer(TorchTrainer):
             self.qf1(obs, new_obs_actions),
             self.qf2(obs, new_obs_actions),
         )
-        policy_loss = (alpha*log_pi - q_new_actions).mean()
+        policy_loss = (alpha * log_pi - q_new_actions).mean()
 
         """
         QF Loss
@@ -131,23 +132,34 @@ class SACTrainer(TorchTrainer):
         q2_pred = self.qf2(obs, actions)
         # Make sure policy accounts for squashing functions like tanh correctly!
         new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs, reparameterize=True, return_log_prob=True,
+            next_obs,
+            reparameterize=True,
+            return_log_prob=True,
         )
-        target_q_values = torch.min(
-            self.target_qf1(next_obs, new_next_actions),
-            self.target_qf2(next_obs, new_next_actions),
-        ) - alpha * new_log_pi
+        target_q_values = (
+            torch.min(
+                self.target_qf1(next_obs, new_next_actions),
+                self.target_qf2(next_obs, new_next_actions),
+            )
+            - alpha * new_log_pi
+        )
 
-        #w = self.weight_pref.repeat(int(len(rewards)/2), 1).to("cuda")
-        # SORL #q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values 
-        #q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values 
+        # w = self.weight_pref.repeat(int(len(rewards)/2), 1).to("cuda")
+        # SORL #q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
+        # q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
         if cuda:
-            q_target = self.reward_scale * torch.matmul(rewards, self.weight_pref).to("cuda") + (1. - terminals) * self.discount * target_q_values            ##ugly fix???#
+            q_target = (
+                self.reward_scale * torch.matmul(rewards, self.weight_pref).to("cuda")
+                + (1.0 - terminals) * self.discount * target_q_values
+            )  ##ugly fix???#
         else:
-            q_target = self.reward_scale * torch.matmul(rewards, self.weight_pref) + (1. - terminals) * self.discount * target_q_values            ##ugly fix???#
-        #q_target = self.reward_scale * torch.multiply(rewards, w) + (1. - terminals) * self.discount * target_q_values # torch.multiply(rewards, self.weight_pref.repeat(len(rewards), 1)) + (1. - terminals) * self.discount * target_q_values  #torch.multiply(rewards, self.weight_pref)
-        #q_target = np.dot(q_target, self.weight_pref) # MORL weights # ERROR  # ADDED
-        
+            q_target = (
+                self.reward_scale * torch.matmul(rewards, self.weight_pref)
+                + (1.0 - terminals) * self.discount * target_q_values
+            )  ##ugly fix???#
+        # q_target = self.reward_scale * torch.multiply(rewards, w) + (1. - terminals) * self.discount * target_q_values # torch.multiply(rewards, self.weight_pref.repeat(len(rewards), 1)) + (1. - terminals) * self.discount * target_q_values  #torch.multiply(rewards, self.weight_pref)
+        # q_target = np.dot(q_target, self.weight_pref) # MORL weights # ERROR  # ADDED
+
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
 
@@ -170,12 +182,8 @@ class SACTrainer(TorchTrainer):
         Soft Updates
         """
         if self._n_train_steps_total % self.target_update_period == 0:
-            ptu.soft_update_from_to(
-                self.qf1, self.target_qf1, self.soft_target_tau
-            )
-            ptu.soft_update_from_to(
-                self.qf2, self.target_qf2, self.soft_target_tau
-            )
+            ptu.soft_update_from_to(self.qf1, self.target_qf1, self.soft_target_tau)
+            ptu.soft_update_from_to(self.qf2, self.target_qf2, self.soft_target_tau)
 
         """
         Save some statistics for eval
@@ -188,40 +196,50 @@ class SACTrainer(TorchTrainer):
             """
             policy_loss = (log_pi - q_new_actions).mean()
 
-            self.eval_statistics['QF1 Loss'] = np.mean(ptu.get_numpy(qf1_loss))
-            self.eval_statistics['QF2 Loss'] = np.mean(ptu.get_numpy(qf2_loss))
-            self.eval_statistics['Policy Loss'] = np.mean(ptu.get_numpy(
-                policy_loss
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q1 Predictions',
-                ptu.get_numpy(q1_pred),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q2 Predictions',
-                ptu.get_numpy(q2_pred),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q Targets',
-                ptu.get_numpy(q_target),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Log Pis',
-                ptu.get_numpy(log_pi),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy mu',
-                ptu.get_numpy(policy_mean),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy log std',
-                ptu.get_numpy(policy_log_std),
-            ))
+            self.eval_statistics["QF1 Loss"] = np.mean(ptu.get_numpy(qf1_loss))
+            self.eval_statistics["QF2 Loss"] = np.mean(ptu.get_numpy(qf2_loss))
+            self.eval_statistics["Policy Loss"] = np.mean(ptu.get_numpy(policy_loss))
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Q1 Predictions",
+                    ptu.get_numpy(q1_pred),
+                )
+            )
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Q2 Predictions",
+                    ptu.get_numpy(q2_pred),
+                )
+            )
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Q Targets",
+                    ptu.get_numpy(q_target),
+                )
+            )
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Log Pis",
+                    ptu.get_numpy(log_pi),
+                )
+            )
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Policy mu",
+                    ptu.get_numpy(policy_mean),
+                )
+            )
+            self.eval_statistics.update(
+                create_stats_ordered_dict(
+                    "Policy log std",
+                    ptu.get_numpy(policy_log_std),
+                )
+            )
             if self.use_automatic_entropy_tuning:
-                self.eval_statistics['Alpha'] = alpha.item()
-                self.eval_statistics['Alpha Loss'] = alpha_loss.item()        
-        #Track losses to wandb
-        #self.wandb_ins.log({"QF1 loss" :self.eval_statistics['QF1 Loss'], "QF2 loss" :self.eval_statistics['QF2 Loss'], "Policy loss": self.eval_statistics['Policy Loss']}) # MORL wandb tracking , # uncomment to track
+                self.eval_statistics["Alpha"] = alpha.item()
+                self.eval_statistics["Alpha Loss"] = alpha_loss.item()
+        # Track losses to wandb
+        # self.wandb_ins.log({"QF1 loss" :self.eval_statistics['QF1 Loss'], "QF2 loss" :self.eval_statistics['QF2 Loss'], "Policy loss": self.eval_statistics['Policy Loss']}) # MORL wandb tracking , # uncomment to track
         self._n_train_steps_total += 1
 
     def get_diagnostics(self):

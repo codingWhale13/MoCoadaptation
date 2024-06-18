@@ -1,30 +1,34 @@
-import rlkit.torch.pytorch_util as ptu
 import cv2
 import os
 from shutil import copyfile, move
 import time
+
 import numpy as np
 
+import rlkit.torch.pytorch_util as ptu
+
+
 def move_to_cpu():
-    """ Set device to cpu for torch.
-    """
+    """Set device to cpu for torch."""
     ptu.set_gpu_mode(False)
 
+
 def move_to_cuda(config):
-    """ Set device to CUDA and which GPU, or CPU if not set.
+    """Set device to CUDA and which GPU, or CPU if not set.
 
     Args:
         config: Dict containing the configuration.
     """
-    if config['use_gpu']:
-        if 'cuda_device' in config:
-            cuda_device = config['cuda_device']
+    if config["use_gpu"]:
+        if "cuda_device" in config:
+            cuda_device = config["cuda_device"]
         else:
             cuda_device = 0
         ptu.set_gpu_mode(True, cuda_device)
 
+
 def copy_pop_to_ind(networks_pop, networks_ind):
-    """ Function used to copy params from pop. networks to individual networks.
+    """Function used to copy params from pop. networks to individual networks.
 
     The parameters of all networks in network_ind will be set to the parameters
     of the networks in networks_ind.
@@ -39,6 +43,7 @@ def copy_pop_to_ind(networks_pop, networks_ind):
         networks_ind[key].load_state_dict(state_dict)
         networks_ind[key].eval()
 
+
 def copy_policie_to_cpu(policy_cpu, policy_gpu):
     # not used anymore
     policy_dict = policy_gpu.state_dict()
@@ -49,8 +54,9 @@ def copy_policie_to_cpu(policy_cpu, policy_gpu):
     policy_cpu.eval()
     return policy_cpu
 
+
 def copy_network(network_to, network_from, config, force_cpu=False):
-    """ Copies networks and set them to device or cpu.
+    """Copies networks and set them to device or cpu.
 
     Args:
         networks_to: Netwoks to which we want to copy (destination).
@@ -67,15 +73,16 @@ def copy_network(network_to, network_from, config, force_cpu=False):
         move_to_cuda(config)
     network_to.load_state_dict(network_from_dict)
     if force_cpu:
-        network_to = network_to.to('cpu')
+        network_to = network_to.to("cpu")
     else:
         network_to.to(ptu.device)
     network_to.eval()
     return network_to
 
-class BestEpisodesVideoRecorder(object):
+
+class BestEpisodesVideoRecorder:
     def __init__(self, path=None, max_videos=1):
-        self._vid_path = '/tmp/videos' if path is None else path
+        self._vid_path = "/tmp/videos" if path is None else path
 
         self._folder_counter = 0
         self._keep_n_best = max(max_videos, 1)
@@ -96,10 +103,11 @@ class BestEpisodesVideoRecorder(object):
 
     def reset_recorder(self):
         self._episode_counter = 0
-        #self._episodic_rewards = [-float('inf')] * self._keep_n_best # ORIG
-        self._episodic_rewards = np.full(self._keep_n_best, -np.inf) # need for numpy array since rewards has two parts and it is numpy array
+        # self._episodic_rewards = [-float('inf')] * self._keep_n_best # ORIG
+        self._episodic_rewards = np.full(
+            self._keep_n_best, -np.inf
+        )  # need for numpy array since rewards has two parts and it is numpy array
         self._episodic_reset()
-
 
     def increase_folder_counter(self):
         self._current_vid_path = os.path.join(self._vid_path, str(self._folder_counter))
@@ -116,8 +124,8 @@ class BestEpisodesVideoRecorder(object):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             self._vid_writer.write(frame)
             self._did_at_least_one_step = True
-        proc_time = (time.time() - self._time_start)*1000
-        proc_time = 1000/proc_time
+        proc_time = (time.time() - self._time_start) * 1000
+        proc_time = 1000 / proc_time
         self._time_start = time.time()
         self._fps_per_frame += proc_time
         self._step_counter += 1
@@ -126,41 +134,76 @@ class BestEpisodesVideoRecorder(object):
         for idx, elem in enumerate(self._episodic_rewards):
             if idx > 1:
                 try:
-                    move(os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-2)))
+                    move(
+                        os.path.join(
+                            self._current_vid_path, "video_{}.avi".format(idx - 1)
+                        ),
+                        os.path.join(
+                            self._current_vid_path, "video_{}.avi".format(idx - 2)
+                        ),
+                    )
                 except:
                     pass
-            if (self._current_episode_reward < elem).any(): #changed for MORL since rewards are not scalarr
-                #self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:] # ORIG
-                self._episodic_rewards = np.concatenate([self._episodic_rewards[1:idx], self._current_episode_reward.ravel(), self._episodic_rewards[idx:]]) # Fix for dimensions
+            if (
+                self._current_episode_reward < elem
+            ).any():  # changed for MORL since rewards are not scalarr
+                # self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:] # ORIG
+                self._episodic_rewards = np.concatenate(
+                    [
+                        self._episodic_rewards[1:idx],
+                        self._current_episode_reward.ravel(),
+                        self._episodic_rewards[idx:],
+                    ]
+                )  # Fix for dimensions
 
-                copyfile(os.path.join(self._current_vid_path, 'current_video.avi'), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)))
+                copyfile(
+                    os.path.join(self._current_vid_path, "current_video.avi"),
+                    os.path.join(
+                        self._current_vid_path, "video_{}.avi".format(idx - 1)
+                    ),
+                )
                 break
             # Will only be true in last iteration and only be hit if last element is to be moved
-            if idx == len(self._episodic_rewards)-1:
+            if idx == len(self._episodic_rewards) - 1:
                 try:
-                    move(os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx)), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx-1)))
+                    move(
+                        os.path.join(
+                            self._current_vid_path, "video_{}.avi".format(idx)
+                        ),
+                        os.path.join(
+                            self._current_vid_path, "video_{}.avi".format(idx - 1)
+                        ),
+                    )
                 except:
                     pass
-                #self._episodic_rewards = self._episodic_rewards[1:] + [self._current_episode_reward] #ORIG
-                self._episodic_rewards = np.concatenate([self._episodic_rewards[1:], self._current_episode_reward.ravel()]) # Fix for dimensions
+                # self._episodic_rewards = self._episodic_rewards[1:] + [self._current_episode_reward] #ORIG
+                self._episodic_rewards = np.concatenate(
+                    [self._episodic_rewards[1:], self._current_episode_reward.ravel()]
+                )  # Fix for dimensions
 
+                copyfile(
+                    os.path.join(self._current_vid_path, "current_video.avi"),
+                    os.path.join(self._current_vid_path, "video_{}.avi".format(idx)),
+                )
 
-                copyfile(os.path.join(self._current_vid_path, 'current_video.avi'), os.path.join(self._current_vid_path, 'video_{}.avi'.format(idx)))
-
-
-    def reset(self, env, state, reward, done):
+    def reset(self, env, state, reward, done, verbose=False):
         # final processing of data from previous episode
         if self._episode_counter % self._record_evy_n_episodes == 0:
             env.camera_adjust()
             self._vid_writer.release()
+            
             if not os.path.exists(self._current_vid_path):
                 os.makedirs(self._current_vid_path)
-            print(self._episodic_rewards) # DEBUGGING
-            print(self._current_episode_reward) # DEBUGGING
-            #if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward: # ORIG
-            if self._did_at_least_one_step and np.min(self._episodic_rewards) < np.min(self._current_episode_reward): #('comparison')).any(): # changed for MORL comparison for two rewards
+
+            # if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward: # ORIG
+            if self._did_at_least_one_step and np.min(self._episodic_rewards) < np.min(
+                self._current_episode_reward
+            ):  # ('comparison')).any(): # changed for MORL comparison for two rewards
                 self._do_video_file_rotation()
-            print('Average FPS of last episode: {}'.format(self._fps_per_frame/self._step_counter))
+            if verbose:
+                print(
+                    f"Average FPS of last episode: {self._fps_per_frame / self._step_counter}"
+                )
 
         self._episode_counter += 1
         self._episodic_reset()
@@ -180,5 +223,9 @@ class BestEpisodesVideoRecorder(object):
     def _create_vid_stream(self):
         if not os.path.exists(self._current_vid_path):
             os.makedirs(self._current_vid_path)
-        self._vid_writer = cv2.VideoWriter(os.path.join(self._current_vid_path, 'current_video.avi'),
-            cv2.VideoWriter_fourcc('M','J','P','G'), 30, (self._frame_width, self._frame_height))
+        self._vid_writer = cv2.VideoWriter(
+            os.path.join(self._current_vid_path, "current_video.avi"),
+            cv2.VideoWriter_fourcc("M", "J", "P", "G"),
+            30,
+            (self._frame_width, self._frame_height),
+        )

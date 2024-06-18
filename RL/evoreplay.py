@@ -1,36 +1,68 @@
-from rlkit.data_management.replay_buffer import ReplayBuffer
-from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 import numpy as np
 
+from rlkit.data_management.replay_buffer import ReplayBuffer
+from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
+
+
 class EvoReplayLocalGlobalStart(ReplayBuffer):
-    def __init__(self, env, max_replay_buffer_size_species, max_replay_buffer_size_population):
-        self._species_buffer = EnvReplayBuffer(env=env, max_replay_buffer_size=max_replay_buffer_size_species)
-        self._population_buffer = EnvReplayBuffer(env=env, max_replay_buffer_size=max_replay_buffer_size_population)
-        self._init_state_buffer = EnvReplayBuffer(env=env, max_replay_buffer_size=max_replay_buffer_size_population)
+    def __init__(
+        self, env, max_replay_buffer_size_species, max_replay_buffer_size_population
+    ):
+        self._species_buffer = EnvReplayBuffer(
+            env=env, max_replay_buffer_size=max_replay_buffer_size_species
+        )
+        self._population_buffer = EnvReplayBuffer(
+            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+        )
+        self._init_state_buffer = EnvReplayBuffer(
+            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+        )
         self._env = env
         self._max_replay_buffer_size_species = max_replay_buffer_size_species
         self._mode = "species"
         self._ep_counter = 0
         self._expect_init_state = True
-        print("Use EvoReplayLocalGlobalStart replay buffer")
+        print("Using EvoReplayLocalGlobalStart as replay buffer")
 
-    def add_sample(self, observation, action, reward, next_observation,
-                   terminal, **kwargs):
+    def add_sample(
+        self, observation, action, reward, next_observation, terminal, **kwargs
+    ):
         """
         Add a transition tuple.
         """
-        if True or self._mode == "species": # This is deactivated now
-            self._species_buffer.add_sample(observation=observation, action=action, reward=reward, next_observation=next_observation,
-                           terminal=terminal, env_info={}, **kwargs)
+        if True or self._mode == "species":  # This is deactivated now
+            self._species_buffer.add_sample(
+                observation=observation,
+                action=action,
+                reward=reward,
+                next_observation=next_observation,
+                terminal=terminal,
+                env_info={},
+                **kwargs,
+            )
             if self._expect_init_state:
-                self._init_state_buffer.add_sample(observation=observation, action=action, reward=reward, next_observation=next_observation,
-                               terminal=terminal, env_info={}, **kwargs)
+                self._init_state_buffer.add_sample(
+                    observation=observation,
+                    action=action,
+                    reward=reward,
+                    next_observation=next_observation,
+                    terminal=terminal,
+                    env_info={},
+                    **kwargs,
+                )
                 self._init_state_buffer.terminate_episode()
                 self._expect_init_state = False
 
             if self._ep_counter >= 0:
-                self._population_buffer.add_sample(observation=observation, action=action, reward=reward, next_observation=next_observation,
-                           terminal=terminal, env_info={}, **kwargs)
+                self._population_buffer.add_sample(
+                    observation=observation,
+                    action=action,
+                    reward=reward,
+                    next_observation=next_observation,
+                    terminal=terminal,
+                    env_info={},
+                    **kwargs,
+                )
 
     def terminate_episode(self):
         """
@@ -50,10 +82,8 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
         """
         if self._mode == "species":
             return self._species_buffer.num_steps_can_sample(**kwargs)
-        elif  self._mode == "population":
+        elif self._mode == "population":
             return self._population_buffer.num_steps_can_sample(**kwargs)
-        else:
-            pass
 
     def random_batch(self, batch_size):
         """
@@ -74,19 +104,15 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             return self._population_buffer.random_batch(batch_size)
         elif self._mode == "start":
             return self._init_state_buffer.random_batch(batch_size)
-        else:
-            pass
 
     def set_mode(self, mode):
-        if mode == "species":
-            self._mode = mode
-        elif mode == "population":
-            self._mode = mode
-        elif mode == "start":
+        if mode in ["species", "population", "start"]:
             self._mode = mode
         else:
-            print("No known mode :(")
+            raise ValueError(f"Mode {mode} for replay buffer does not exist")
 
     def reset_species_buffer(self):
-        self._species_buffer = EnvReplayBuffer(env = self._env, max_replay_buffer_size=self._max_replay_buffer_size_species)
+        self._species_buffer = EnvReplayBuffer(
+            env=self._env, max_replay_buffer_size=self._max_replay_buffer_size_species
+        )
         self._ep_counter = 0

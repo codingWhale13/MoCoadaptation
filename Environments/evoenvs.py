@@ -1,34 +1,50 @@
+import copy
 from gym import spaces
 import numpy as np
+
 from .pybullet_evo.gym_locomotion_envs import HalfCheetahBulletEnv
-import copy
 from utils import BestEpisodesVideoRecorder
 
-class HalfCheetahEnv(object):
-    def __init__(self, config = {'env' : {'render' : True, 'record_video': False}}):
+
+class HalfCheetahEnv:
+    def __init__(self, config={"env": {"render": True, "record_video": False}}):
         self._config = config
-        self._render = self._config['env']['render']
-        self._record_video = self._config['env']['record_video']
+        self._render = self._config["env"]["render"]
+        self._record_video = self._config["env"]["record_video"]
         self._current_design = [1.0] * 6
         self._config_numpy = np.array(self._current_design)
         self.design_params_bounds = [(0.8, 2.0)] * 6
-        self._env = HalfCheetahBulletEnv(render=self._render, design=self._current_design)
+        self._env = HalfCheetahBulletEnv(
+            render=self._render, design=self._current_design
+        )
         self.init_sim_params = [
             [1.0] * 6,
             [1.41, 0.96, 1.97, 1.73, 1.97, 1.17],
             [1.52, 1.07, 1.11, 1.97, 1.51, 0.99],
-            [1.08, 1.18, 1.39, 1.76 , 1.85, 0.92],
+            [1.08, 1.18, 1.39, 1.76, 1.85, 0.92],
             [0.85, 1.54, 0.97, 1.38, 1.10, 1.49],
         ]
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=[self._env.observation_space.shape[0] + 6], dtype=np.float32)#env.observation_space
+        self.observation_space = spaces.Box(
+            -np.inf,
+            np.inf,
+            shape=[self._env.observation_space.shape[0] + 6],
+            dtype=np.float32,
+        )  # env.observation_space
         self.action_space = self._env.action_space
         self._initial_state = self._env.reset()
 
         if self._record_video:
-            self._video_recorder = BestEpisodesVideoRecorder(path=config['data_folder_experiment'], max_videos=5)
+            self._video_recorder = BestEpisodesVideoRecorder(
+                path=config["data_folder_experiment"], max_videos=5
+            )
 
         # Which dimensions in the state vector are design parameters?
-        self._design_dims = list(range(self.observation_space.shape[0] - len(self._current_design), self.observation_space.shape[0]))
+        self._design_dims = list(
+            range(
+                self.observation_space.shape[0] - len(self._current_design),
+                self.observation_space.shape[0],
+            )
+        )
         assert len(self._design_dims) == 6
 
     def render(self):
@@ -38,14 +54,15 @@ class HalfCheetahEnv(object):
         info = {}
         state, reward, done, _ = self._env.step(a)
         state = np.append(state, self._config_numpy)
-        info['orig_action_cost'] = 0.1 * np.mean(np.square(a))
-        info['orig_reward'] = reward
+        info["orig_action_cost"] = 0.1 * np.mean(np.square(a))
+        info["orig_reward"] = reward
 
         if self._record_video:
-            self._video_recorder.step(env=self._env, state=state, reward=reward, done=done)
+            self._video_recorder.step(
+                env=self._env, state=state, reward=reward, done=done
+            )
 
         return state, reward, False, info
-
 
     def reset(self):
         state = self._env.reset()

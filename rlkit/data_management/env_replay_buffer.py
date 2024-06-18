@@ -1,7 +1,7 @@
 from gym.spaces import Box, Discrete, Tuple
+import numpy as np
 
 from rlkit.data_management.simple_replay_buffer import SimpleReplayBuffer
-import numpy as np
 
 
 def get_dim(space):
