@@ -191,7 +191,7 @@ class BestEpisodesVideoRecorder:
         if self._episode_counter % self._record_evy_n_episodes == 0:
             env.camera_adjust()
             self._vid_writer.release()
-            
+
             if not os.path.exists(self._current_vid_path):
                 os.makedirs(self._current_vid_path)
 

@@ -1,19 +1,19 @@
-import utils
-
-import numpy as np
-import torch
-
-from rlkit.torch.networks import FlattenMlp
-import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.sac.policies import TanhGaussianPolicy
-from rlkit.torch.sac.sac import SACTrainer as SoftActorCritic_rlkit
+
+# from rlkit.torch.sac.sac import SoftActorCritic
+from rlkit.torch.networks import FlattenMlp
+import numpy as np
 from .rl_algorithm import RL_algorithm
+from rlkit.torch.sac.sac import SACTrainer as SoftActorCritic_rlkit
+import rlkit.torch.pytorch_util as ptu
+import torch
+import utils
 
 
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
-    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance, use_gpu=True):
-        """Bascally a wrapper class for rlkit.torch.sac.sac.SoftActorCritic
+    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance):
+        """Bascally a wrapper class for SAC from rlkit.
 
         Args:
             config: Configuration dictonary
@@ -44,7 +44,7 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_pop_updates = config["rl_algorithm_config"]["pop_updates"]
 
         self._weight_pref = weight_pref  # Needed for MORL
-        self._wandb_instance = wandb_instance  # Needed for passing values to wandb from sac.py from RLkit # MORL
+        self._wandb_instance = wandb_instance  # Needed for passing values to wandb from sac.py from RLkit # MORL # uncomment to track with wandb
 
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
@@ -55,8 +55,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL
-            use_gpu=use_gpu,
+            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_spec,
         )
 
@@ -69,7 +68,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning=False,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_pop,
         )
 
@@ -92,7 +91,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             # alt_alpha = self._alt_alpha,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL
+            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
             **self._variant_spec,
         )
         if self._config["rl_algorithm_config"]["copy_from_gobal"]:
@@ -154,32 +153,44 @@ class SoftActorCritic(RL_algorithm):
 
     @staticmethod
     def _create_networks(env, config):
-        # TODO: Maybe this should be reworked one day...
+        """Creates all networks necessary for SAC.
 
+        These networks have to be created before instantiating this class and
+        used in the constructor.
+
+        TODO: Maybe this should be reworked one day...
+
+        Args:
+            config: A configuration dictonary.
+
+        Returns:
+            A dictonary which contains the networks.
+        """
         obs_dim = int(np.prod(env.observation_space.shape))
         action_dim = int(np.prod(env.action_space.shape))
         net_size = config["rl_algorithm_config"]["net_size"]
         hidden_sizes = [net_size] * config["rl_algorithm_config"]["network_depth"]
         # hidden_sizes = [net_size, net_size, net_size]
+        reward_dim = env._env.reward_dim
         qf1 = FlattenMlp(
             hidden_sizes=hidden_sizes,
             input_size=obs_dim + action_dim,
-            output_size=1,
+            output_size=reward_dim,
         ).to(device=ptu.device)
         qf2 = FlattenMlp(
             hidden_sizes=hidden_sizes,
             input_size=obs_dim + action_dim,
-            output_size=1,
+            output_size=reward_dim,
         ).to(device=ptu.device)
         qf1_target = FlattenMlp(
             hidden_sizes=hidden_sizes,
             input_size=obs_dim + action_dim,
-            output_size=1,
+            output_size=reward_dim,
         ).to(device=ptu.device)
         qf2_target = FlattenMlp(
             hidden_sizes=hidden_sizes,
             input_size=obs_dim + action_dim,
-            output_size=1,
+            output_size=reward_dim,
         ).to(device=ptu.device)
         policy = TanhGaussianPolicy(
             hidden_sizes=hidden_sizes,

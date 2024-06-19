@@ -500,7 +500,7 @@ class Coadaptation:
         """
         self._data_design_type = "Initial"
 
-        if self._config["load_model"]:
+        if self._config["initial_model_path"] is not None:
             self._design_counter += 1
             self.initialize_episode()
             for _ in range(iterations):

@@ -114,7 +114,6 @@ if __name__ == "__main__":
     config["seed"] = args.seed
     config["use_wandb"] = args.use_wandb
     config["initial_model_path"] = args.initial_model_path
-    config["load_model"] = args.initial_model_path is not None
 
     print(json.dumps(config, sort_keys=True, indent=4))
 
