@@ -41,7 +41,7 @@ class SACTrainer(TorchTrainer):
     ):
         super().__init__()
         self.weight_pref = weight_pref  # MORL weights
-        # self.wandb_ins = wandb_instance # for passing values to wandb when wandb is initilized in coadapt class # MORL # uncomment to track
+        self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
 
         self.env = env
         self.policy = policy
@@ -122,10 +122,13 @@ class SACTrainer(TorchTrainer):
             alpha = self._alpha
 
         q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions),
-            self.qf2(obs, new_obs_actions),
+            self.qf1(obs, new_obs_actions), self.qf2(obs, new_obs_actions)
         )
-        policy_loss = (alpha * log_pi - q_new_actions).mean()
+        q_new_actions_weighted = torch.matmul(q_new_actions, self.weight_pref)
+        if self._use_gpu:
+            q_new_actions_weighted = q_new_actions_weighted.to("cuda")
+
+        policy_loss = (alpha * log_pi - q_new_actions_weighted).mean()
 
         """
         QF Loss
@@ -240,8 +243,15 @@ class SACTrainer(TorchTrainer):
             if self.use_automatic_entropy_tuning:
                 self.eval_statistics["Alpha"] = alpha.item()
                 self.eval_statistics["Alpha Loss"] = alpha_loss.item()
-        # Track losses to wandb
-        # self.wandb_ins.log({"QF1 loss" :self.eval_statistics['QF1 Loss'], "QF2 loss" :self.eval_statistics['QF2 Loss'], "Policy loss": self.eval_statistics['Policy Loss']}) # MORL wandb tracking , # uncomment to track
+
+        if self.wandb_instance is not None:
+            self.wandb_instance.log(
+                {
+                    "QF1 loss": self.eval_statistics["QF1 Loss"],
+                    "QF2 loss": self.eval_statistics["QF2 Loss"],
+                    "Policy loss": self.eval_statistics["Policy Loss"],
+                }
+            )
         self._n_train_steps_total += 1
 
     def get_diagnostics(self):
