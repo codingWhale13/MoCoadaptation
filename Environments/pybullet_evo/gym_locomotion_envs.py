@@ -240,7 +240,6 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
-        self.reward_dim = 2
 
     def _isDone(self):
         return False
@@ -279,6 +278,7 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
+        self.reward_dim = 2
 
     def _isDone(self):
         return False

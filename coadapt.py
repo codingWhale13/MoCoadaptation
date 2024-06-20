@@ -74,7 +74,7 @@ class Coadaptation:
         project_name = config["project_name"]
         run_name = config["run_name"]
         weight_index = config["weight_index"]
-        initial_model_path = self._config["initial_model_path"]
+        initial_model_path = config["initial_model_path"]
 
         self._use_wandb = config["use_wandb"]
         self._use_gpu = config["use_gpu"]
@@ -85,7 +85,7 @@ class Coadaptation:
         self._config = config
         utils.move_to_cuda(self._config)
 
-        ### If you want to start training from a previous model, you will need to provide model path here:
+        # in case training starts from a previous model, set the load path here
         self._last_model_checkpoint = None
         if initial_model_path is not None:
             self._path_to_folder = initial_model_path  #'/home/oskar/Thesis/inter/models_vect_batch/results_with_rescaling/set_seed/0.6_0.4/Thu_Jan__4_20_03_30_2024__b219b4ae[0.6,0.4]_3' # path_to_folder # ###your path to folder of loaded model ###
@@ -109,7 +109,7 @@ class Coadaptation:
         weights = self._config["weights"][weight_index]
         self._weights_pref = torch.tensor(weights).reshape(2, 1)
         if config["use_gpu"]:
-            self._weights_pref.to("cuda")
+            self._weights_pref = self._weights_pref.to("cuda")
 
         # initialize env
         env_cls = select_env(self._config["env"]["env_name"])
@@ -342,6 +342,7 @@ class Coadaptation:
             "population": checkpoints_pop,
             "individual": checkpoints_ind,
         }
+
         file_path = os.path.join(self._config["data_folder_experiment"], "checkpoints")
         if not os.path.exists(file_path):
             os.makedirs(file_path)
@@ -371,7 +372,7 @@ class Coadaptation:
         """Saves the logged data to the disk as csv files.
 
         This function creates a log-file in csv format on the disk. For each
-        design an individual log-file is creates in the experient-directory.
+        design an individual log-file is creates in the experiment directory.
         The first row states if the design was one of the initial designs
         (as given by the environment), a random design or an optimized design.
         The second row gives the design parameters (eta). The third row
@@ -457,7 +458,6 @@ class Coadaptation:
         optimized_params = list(optimized_params)
 
         for i in range(design_cycles):
-            print(f"design cycle {i}/{design_cycles}", flush=True)
             self._design_counter += 1
             self._env.set_new_design(optimized_params)
 

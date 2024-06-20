@@ -12,7 +12,9 @@ import utils
 
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
-    def __init__(self, config, env, replay, networks, weight_pref, wandb_instance):
+    def __init__(
+        self, config, env, replay, networks, weight_pref, wandb_instance, use_gpu=False
+    ):
         """Bascally a wrapper class for SAC from rlkit.
 
         Args:
@@ -56,6 +58,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
             wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            use_gpu=use_gpu,
             **self._variant_spec,
         )
 
@@ -69,8 +72,11 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
             wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            use_gpu=use_gpu,
             **self._variant_pop,
         )
+
+        self._use_gpu = use_gpu
 
         # self._algorithm_ind.to(ptu.device)
         # self._algorithm_pop.to(ptu.device)
@@ -92,6 +98,7 @@ class SoftActorCritic(RL_algorithm):
             # alt_alpha = self._alt_alpha,
             weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
             wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            use_gpu=self._use_gpu,
             **self._variant_spec,
         )
         if self._config["rl_algorithm_config"]["copy_from_gobal"]:
