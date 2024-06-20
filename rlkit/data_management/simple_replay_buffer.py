@@ -95,6 +95,32 @@ class SimpleReplayBuffer(ReplayBuffer):
             batch[key] = self._env_infos[key][indices]
         return batch
 
+    def get_contents(self):
+        batch = dict(
+            observations=self._observations,
+            actions=self._actions,
+            rewards=self._rewards,
+            terminals=self._terminals,
+            next_observations=self._next_obs,
+            top=self._top,
+            size=self._size,
+        )
+        # NOTE: the remaining attributes (_observation_dim, _action_dim,
+        # _max_replay_buffer_size, _env_infos, _replace) are not saved because
+        # they are only set once in __init__ and we assume these values to not
+        # change between saving and loading the replay buffer
+
+        return batch
+
+    def set_contents(self, contents):
+        self._observations = contents["observations"]
+        self._actions = contents["actions"]
+        self._rewards = contents["rewards"]
+        self._terminals = contents["terminals"]
+        self._next_obs = contents["next_observations"]
+        self._top = contents["top"]
+        self._size = contents["size"]
+
     def rebuild_env_info_dict(self, idx):
         return {key: self._env_infos[key][idx] for key in self._env_info_keys}
 

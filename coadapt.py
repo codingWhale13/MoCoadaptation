@@ -78,12 +78,13 @@ class Coadaptation:
 
         self._use_wandb = config["use_wandb"]
         self._use_gpu = config["use_gpu"]
-
-        if self._use_wandb:
-            wandb.init(project=project_name, name=run_name)
-
+        self.data_folder_experiment = config["data_folder_experiment"]
+        
         self._config = config
         utils.move_to_cuda(self._config)
+        
+        if self._use_wandb:
+            wandb.init(project=project_name, name=run_name)
 
         # in case training starts from a previous model, set the load path here
         self._last_model_checkpoint = None
@@ -104,18 +105,18 @@ class Coadaptation:
                 model_file[1], dtype=float
             )  # index link lengths from the file
 
-        self._episode_length = self._config["steps_per_episodes"]
+        self._episode_length = config["steps_per_episodes"]
 
-        weights = self._config["weights"][weight_index]
+        weights = config["weights"][weight_index]
         self._weights_pref = torch.tensor(weights).reshape(2, 1)
         if config["use_gpu"]:
             self._weights_pref = self._weights_pref.to("cuda")
 
         # initialize env
-        env_cls = select_env(self._config["env"]["env_name"])
+        env_cls = select_env(config["env"]["env_name"])
         # energy reward is approximately 1.725 larger than running reward
         self._env = env_cls(config=config, reward_scaling_energy=0.27532)
-        self._reward_scale = self._config["rl_algorithm_config"]["algo_params"][
+        self._reward_scale = config["rl_algorithm_config"]["algo_params"][
             "reward_scale"
         ]  # TODO: This should not depend on rl_algorithm_config in the future
 
@@ -127,12 +128,12 @@ class Coadaptation:
         )
 
         # initialize RL algo
-        self._rl_algo_class = select_rl_algo(self._config["rl_method"])
+        self._rl_algo_class = select_rl_algo(config["rl_method"])
         self._networks = self._rl_algo_class.create_networks(
             env=self._env, config=config
         )
         self._rl_algo = self._rl_algo_class(
-            config=self._config,
+            config=config,
             env=self._env,
             replay=self._replay,
             networks=self._networks,
@@ -141,7 +142,7 @@ class Coadaptation:
             use_gpu=self._use_gpu,
         )
         if self._use_gpu:
-            utils.move_to_cuda(self._config)
+            utils.move_to_cuda(config)
         else:
             utils.move_to_cpu()
             self._policy_cpu = self._rl_algo_class.get_policy_network(
@@ -151,10 +152,8 @@ class Coadaptation:
             )
 
         # initialize DO algo
-        do_algo_class = select_design_opt_algo(self._config["design_optim_method"])
-        self._do_alg = do_algo_class(
-            config=self._config, replay=self._replay, env=self._env
-        )
+        do_algo_class = select_design_opt_algo(config["design_optim_method"])
+        self._do_alg = do_algo_class(config=config, replay=self._replay, env=self._env)
 
         self._last_single_iteration_time = 0
         self._design_counter = 0
@@ -203,7 +202,7 @@ class Coadaptation:
         self._episode_counter += 1
         self.execute_policy()
         self.save_logged_data()
-        self.save_networks()
+        self.save_checkpoint()
 
     def collect_training_experience(self):
         """Collect training data.
@@ -325,48 +324,53 @@ class Coadaptation:
             r1, r2 = reward_ep
             wandb.log({"Reward run": r1, "Reward energy consumption": r2})
 
-    def save_networks(self):
-        """Saves the networks on the disk."""
-        if not self._config["save_networks"]:
-            return
+    def save_checkpoint(self):
+        """Saves the networks and replay buffer to disk if specified in config."""
+        checkpoint = dict()
 
-        checkpoints_pop = {}
-        for key, net in self._networks["population"].items():
-            checkpoints_pop[key] = net.state_dict()
+        if self._config["save_networks"]:
+            checkpoints_pop = {}
+            for key, net in self._networks["population"].items():
+                checkpoints_pop[key] = net.state_dict()
 
-        checkpoints_ind = {}
-        for key, net in self._networks["individual"].items():
-            checkpoints_ind[key] = net.state_dict()
+            checkpoints_ind = {}
+            for key, net in self._networks["individual"].items():
+                checkpoints_ind[key] = net.state_dict()
 
-        checkpoint = {
-            "population": checkpoints_pop,
-            "individual": checkpoints_ind,
-        }
+            checkpoint["population"] = checkpoints_pop
+            checkpoint["individual"] = checkpoints_ind
 
-        file_path = os.path.join(self._config["data_folder_experiment"], "checkpoints")
-        if not os.path.exists(file_path):
-            os.makedirs(file_path)
-        torch.save(
-            checkpoint,
-            os.path.join(
-                file_path, "checkpoint_design_{}.chk".format(self._design_counter)
-            ),
-        )
+        if self._config["save_replay_buffer"]:
+            checkpoint["replay_buffer"] = self._replay.get_contents()
 
-    def load_networks(self, path):
-        """Loads netwokrs from the disk."""
+        if len(checkpoint.keys()) > 0:
+            save_dir = os.path.join(self.data_folder_experiment, "checkpoints")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            torch.save(
+                checkpoint,
+                os.path.join(save_dir, f"checkpoint_design_{self._design_counter}.chk"),
+            )
+
+    def load_checkpoint(self, path):
+        """Loads last checkpoint from disk."""
         model_data = torch.load(path)  # , map_location=ptu.device) # needs to be fixed
         # model_data = torch.load(path, map_location=ptu.device)
 
-        model_data_pop = model_data["population"]
-        for key, net in self._networks["population"].items():
-            params = model_data_pop[key]
-            net.load_state_dict(params)
+        if "population" in model_data.keys():
+            model_data_pop = model_data["population"]
+            for key, net in self._networks["population"].items():
+                params = model_data_pop[key]
+                net.load_state_dict(params)
+        
+        if "individual" in model_data.keys():
+            model_data_ind = model_data["individual"]
+            for key, net in self._networks["individual"].items():
+                params = model_data_ind[key]
+                net.load_state_dict(params)
 
-        model_data_ind = model_data["individual"]
-        for key, net in self._networks["individual"].items():
-            params = model_data_ind[key]
-            net.load_state_dict(params)
+        if "replay_buffer" in model_data.keys():
+            self._replay.set_contents(model_data["replay_buffer"])
 
     def save_logged_data(self):
         """Saves the logged data to the disk as csv files.
@@ -380,10 +384,7 @@ class Coadaptation:
         throughout the reinforcement learning process on the current design.
         """
         current_design = self._env.get_current_design()
-        save_dir = os.path.join(
-            self._config["data_folder_experiment"],
-            "data_designs",
-        )
+        save_dir = os.path.join(self.data_folder_experiment, "data_designs")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
@@ -415,7 +416,7 @@ class Coadaptation:
         exploration_strategy = self._config["exploration_strategy"]
 
         if self._last_model_checkpoint is not None:
-            self.load_networks(self._last_model_checkpoint)
+            self.load_checkpoint(self._last_model_checkpoint)
             self._env.set_new_design(self._link_lengths)
 
         self._intial_design_loop(iterations_init)

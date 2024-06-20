@@ -12,6 +12,7 @@ sac_pso_batch = {
     "design_optim_method": "pso_batch",  # Which design optimization method to use
     "steps_per_episodes": 1000,  # Number of steps per episode
     "save_networks": True,  # If True networks are checkpointed and saved for each design
+    "save_replay_buffer": True,  # If True replay buffers are checkpointed and saved for each design
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use.
     "weights": [
         [0.0, 1.0],
@@ -73,6 +74,7 @@ sac_pso_sim = {
     "design_optim_method": "pso_sim",
     "steps_per_episodes": 1000,  # Number of steps per episode
     "save_networks": True,
+    "save_replay_buffer": True,
     "rl_method": "SoftActorCritic",
     "weights": [
         [0.0, 1.0],

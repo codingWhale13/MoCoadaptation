@@ -116,3 +116,17 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             env=self._env, max_replay_buffer_size=self._max_replay_buffer_size_species
         )
         self._ep_counter = 0
+
+    def get_contents(self):
+        contents = {
+            "species_buffer": self._species_buffer.get_contents(),
+            "population_buffer": self._population_buffer.get_contents(),
+            "init_state_buffer": self._init_state_buffer.get_contents(),
+        }
+
+        return contents
+
+    def set_contents(self, contents):
+        self._species_buffer.set_contents(contents["species_buffer"])
+        self._population_buffer.set_contents(contents["population_buffer"])
+        self._init_state_buffer.set_contents(contents["init_state_buffer"])
