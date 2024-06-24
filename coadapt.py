@@ -315,7 +315,7 @@ class Coadaptation:
             # save rewards and current design
             wandb.log({"Rewards": self._data_rewards, "Current design": current_design})
 
-    def save_checkpoint(self):
+    def save_rl_checkpoint(self):
         """Saves the networks and replay buffer to disk if specified in config."""
         checkpoint = dict()
 
@@ -323,12 +323,11 @@ class Coadaptation:
             checkpoints_pop = {}
             for key, net in self._networks["population"].items():
                 checkpoints_pop[key] = net.state_dict()
+            checkpoint["population"] = checkpoints_pop
 
             checkpoints_ind = {}
             for key, net in self._networks["individual"].items():
                 checkpoints_ind[key] = net.state_dict()
-
-            checkpoint["population"] = checkpoints_pop
             checkpoint["individual"] = checkpoints_ind
 
         if self._config["save_replay_buffer"]:
@@ -369,7 +368,6 @@ class Coadaptation:
         self._episode_counter += 1
         self.execute_policy()
         self.save_logged_data()
-        self.save_checkpoint()
 
     def _intial_design_loop(self, iterations):
         """The initial training loop for initial designs.
@@ -384,20 +382,18 @@ class Coadaptation:
         """
         self._data_design_type = "Initial"
 
-        if self._initial_model_path is not None:
-            self._design_counter += 1
-            self.initialize_episode()
-            for _ in range(iterations):
-                self.single_iteration()
-        else:
+        if self._initial_model_path is None:
             for params in self._env.init_sim_params:
                 self._design_counter += 1
                 self._env.set_new_design(params)
                 self.initialize_episode()
-
-                # Reinforcement Learning
                 for _ in range(iterations):
-                    self.single_iteration()
+                    self.single_iteration()  # reinforcement learning
+        else:
+            self._design_counter += 1
+            self.initialize_episode()
+            for _ in range(iterations):
+                self.single_iteration()
 
     def _training_loop(self, iterations, design_cycles, exploration_strategy):
         """The trianing process which optimizes designs and policies.
@@ -442,6 +438,7 @@ class Coadaptation:
             # Reinforcement Learning
             for _ in range(iterations):
                 self.single_iteration()
+            self.save_rl_checkpoint()
 
             # Design Optimization
             if i % 2 == 1:
