@@ -14,38 +14,6 @@ from RL.evoreplay import EvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 
 
-def find_checkpoint(path_to_directory):
-    """Find the checkpoint for the model
-
-    Returns: returns the int value of the last checkpoint or None
-    """
-    checkpoints = []
-    for file in os.listdir(path_to_directory):
-        if file.endswith(".csv"):
-            checkpoint = int(file.split("_")[-1][:-4])
-            checkpoints.append(checkpoint)
-    if checkpoints:
-        return max(checkpoints)
-    else:
-        return None
-
-
-def read_morphology(path, checkpoint) -> list:
-    """Returns a list of values read from cvs file per row
-
-    Returns: a list containing csv file values
-    """
-    rows = []
-    for filename in os.listdir(path):
-        if filename.endswith(checkpoint):
-            filepath = os.path.join(path, filename)
-            with open(filepath, newline="") as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    rows.append(row)
-    return rows
-
-
 def select_env(env_name):
     if env_name == "HalfCheetah":
         return HalfCheetahEnvMO
@@ -74,36 +42,17 @@ class Coadaptation:
         project_name = config["project_name"]
         run_name = config["run_name"]
         weight_index = config["weight_index"]
-        initial_model_path = config["initial_model_path"]
+        self._initial_model_path = config["initial_model_path"]
 
         self._use_wandb = config["use_wandb"]
         self._use_gpu = config["use_gpu"]
         self.data_folder_experiment = config["data_folder_experiment"]
-        
+
         self._config = config
         utils.move_to_cuda(self._config)
-        
+
         if self._use_wandb:
             wandb.init(project=project_name, name=run_name)
-
-        # in case training starts from a previous model, set the load path here
-        self._last_model_checkpoint = None
-        if initial_model_path is not None:
-            self._path_to_folder = initial_model_path  #'/home/oskar/Thesis/inter/models_vect_batch/results_with_rescaling/set_seed/0.6_0.4/Thu_Jan__4_20_03_30_2024__b219b4ae[0.6,0.4]_3' # path_to_folder # ###your path to folder of loaded model ###
-            self._last_checkpoint = find_checkpoint(initial_model_path)
-            self._last_model_checkpoint = (
-                f"checkpoint_design_{self._last_checkpoint}.chk"
-            )
-            self._last_model_checkpoint = os.path.join(
-                initial_model_path, "checkpoints", self._last_model_checkpoint
-            )
-            morphology_number = str(self._last_checkpoint) + ".csv"
-            model_file = read_morphology(
-                initial_model_path, morphology_number
-            )  # read model csv file as list
-            self._link_lengths = np.array(
-                model_file[1], dtype=float
-            )  # index link lengths from the file
 
         self._episode_length = config["steps_per_episodes"]
 
@@ -159,8 +108,47 @@ class Coadaptation:
         self._design_counter = 0
         self._episode_counter = 0
         self._data_design_type = (
-            "Initial" if initial_model_path is None else "Pre-trained"
+            "Initial" if self._initial_model_path is None else "Pre-trained"
         )
+
+    def load_do_checkpoint(self):
+        """Loads last checkpoint of design opimization process."""
+        do_dir = os.path.join(self._initial_model_path, "do_checkpoints")
+        file_path = max(os.listdir(do_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
+
+        rows = []
+        with open(os.path.join(do_dir, file_path), newline="") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                rows.append(row)
+
+        self._link_lengths = np.array(rows[1], dtype=float)
+        self._env.set_new_design(self._link_lengths)
+
+    def load_rl_checkpoint(self):
+        """Loads last checkpoint of RL agent from disk."""
+        load_dir = os.path.join(self._initial_model_path, "rl_checkpoints")
+        filename = max(os.listdir(load_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
+        chk_path = os.path.join(load_dir, filename)
+        # chk_path = "/scratch/work/kielen1/experiments/data_exp_sac_pso_sim/run_2024-06-20T16-46-10_436c98ae_0.5-0.5/rl_checkpoints/checkpoint_design_2.chk"
+
+        model_data = torch.load(chk_path)
+        # original author's NOTE: adding `map_location=ptu.device` needs to be fixed
+
+        if "population" in model_data.keys():
+            model_data_pop = model_data["population"]
+            for key, net in self._networks["population"].items():
+                params = model_data_pop[key]
+                net.load_state_dict(params)
+
+        if "individual" in model_data.keys():
+            model_data_ind = model_data["individual"]
+            for key, net in self._networks["individual"].items():
+                params = model_data_ind[key]
+                net.load_state_dict(params)
+
+        if "replay_buffer" in model_data.keys():
+            self._replay.set_contents(model_data["replay_buffer"])
 
     def initialize_episode(self):
         """Initializations required before the first episode.
@@ -177,32 +165,6 @@ class Coadaptation:
         self._states = []  # Needed for checking observations
         self._actions = []  # Needed for checking actions
         self._episode_counter = 0
-
-    def single_iteration(self):
-        """A single iteration.
-
-        Makes all necessary function calls for a single iterations such as:
-            - Collecting training data
-            - Executing a training step
-            - Evaluate the current policy
-            - Log data
-        """
-        print(
-            f"Time for one iteration: {time.time() - self._last_single_iteration_time}"
-        )
-        self._last_single_iteration_time = time.time()
-        self._replay.set_mode("species")
-        self.collect_training_experience()
-
-        # TODO Change here to train global only after five designs
-        train_pop = self._design_counter > 3
-        if self._episode_counter >= self._config["initial_episodes"]:
-            self._rl_algo.single_train_step(train_ind=True, train_pop=train_pop)
-
-        self._episode_counter += 1
-        self.execute_policy()
-        self.save_logged_data()
-        self.save_checkpoint()
 
     def collect_training_experience(self):
         """Collect training data.
@@ -324,6 +286,35 @@ class Coadaptation:
             r1, r2 = reward_ep
             wandb.log({"Reward run": r1, "Reward energy consumption": r2})
 
+    def save_logged_data(self):
+        """Saves the logged data to the disk as csv files.
+
+        This function creates a log-file in csv format on the disk. For each
+        design an individual log-file is creates in the experiment directory.
+        The first row states if the design was one of the initial designs
+        (as given by the environment), a random design or an optimized design.
+        The second row gives the design parameters (eta). The third row
+        contains all subsequent cumulative rewards achieved by the policy
+        throughout the reinforcement learning process on the current design.
+        """
+        current_design = self._env.get_current_design()
+        save_dir = os.path.join(self.data_folder_experiment, "do_checkpoints")
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        with open(
+            os.path.join(save_dir, f"data_design_{self._design_counter}.csv"), "w"
+        ) as file:
+            cwriter = csv.writer(file)
+            cwriter.writerow(["Design Type:", self._data_design_type])
+            cwriter.writerow(current_design)
+            cwriter.writerow([reward[0] for reward in self._data_rewards])
+            cwriter.writerow([reward[1] for reward in self._data_rewards])
+
+        if self._use_wandb:
+            # save rewards and current design
+            wandb.log({"Rewards": self._data_rewards, "Current design": current_design})
+
     def save_checkpoint(self):
         """Saves the networks and replay buffer to disk if specified in config."""
         checkpoint = dict()
@@ -344,83 +335,69 @@ class Coadaptation:
             checkpoint["replay_buffer"] = self._replay.get_contents()
 
         if len(checkpoint.keys()) > 0:
-            save_dir = os.path.join(self.data_folder_experiment, "checkpoints")
+            save_dir = os.path.join(self.data_folder_experiment, "rl_checkpoints")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             torch.save(
                 checkpoint,
-                os.path.join(save_dir, f"checkpoint_design_{self._design_counter}.chk"),
+                os.path.join(
+                    save_dir, f"checkpoint_for_design_{self._design_counter}.chk"
+                ),
             )
 
-    def load_checkpoint(self, path):
-        """Loads last checkpoint from disk."""
-        model_data = torch.load(path)  # , map_location=ptu.device) # needs to be fixed
-        # model_data = torch.load(path, map_location=ptu.device)
+    def single_iteration(self):
+        """A single iteration.
 
-        if "population" in model_data.keys():
-            model_data_pop = model_data["population"]
-            for key, net in self._networks["population"].items():
-                params = model_data_pop[key]
-                net.load_state_dict(params)
-        
-        if "individual" in model_data.keys():
-            model_data_ind = model_data["individual"]
-            for key, net in self._networks["individual"].items():
-                params = model_data_ind[key]
-                net.load_state_dict(params)
-
-        if "replay_buffer" in model_data.keys():
-            self._replay.set_contents(model_data["replay_buffer"])
-
-    def save_logged_data(self):
-        """Saves the logged data to the disk as csv files.
-
-        This function creates a log-file in csv format on the disk. For each
-        design an individual log-file is creates in the experiment directory.
-        The first row states if the design was one of the initial designs
-        (as given by the environment), a random design or an optimized design.
-        The second row gives the design parameters (eta). The third row
-        contains all subsequent cumulative rewards achieved by the policy
-        throughout the reinforcement learning process on the current design.
+        Makes all necessary function calls for a single iterations such as:
+            - Collecting training data
+            - Executing a training step
+            - Evaluate the current policy
+            - Log data
         """
-        current_design = self._env.get_current_design()
-        save_dir = os.path.join(self.data_folder_experiment, "data_designs")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        print(
+            f"Time for one iteration: {time.time() - self._last_single_iteration_time}"
+        )
+        self._last_single_iteration_time = time.time()
+        self._replay.set_mode("species")
+        self.collect_training_experience()
 
-        with open(
-            os.path.join(save_dir, f"data_design_{self._design_counter}.csv"), "w"
-        ) as file:
-            cwriter = csv.writer(file)
-            cwriter.writerow(["Design Type:", self._data_design_type])
-            cwriter.writerow(current_design)
-            cwriter.writerow([reward[0] for reward in self._data_rewards])
-            cwriter.writerow([reward[1] for reward in self._data_rewards])
+        # TODO Change here to train global only after five designs
+        train_pop = self._design_counter > 3
+        if self._episode_counter >= self._config["initial_episodes"]:
+            self._rl_algo.single_train_step(train_ind=True, train_pop=train_pop)
 
-        if self._use_wandb:
-            # save rewards and current design
-            wandb.log({"Rewards": self._data_rewards, "Current design": current_design})
+        self._episode_counter += 1
+        self.execute_policy()
+        self.save_logged_data()
+        self.save_checkpoint()
 
-    def run(self):
-        """Runs the Fast Evolution through Actor-Critic RL algorithm.
+    def _intial_design_loop(self, iterations):
+        """The initial training loop for initial designs.
 
-        First the initial design loop is executed in which the rl-algorithm
-        is exeuted on the initial designs. Then the design-optimization
-        process starts.
-        It is possible to have different numbers of iterations for initial
-        designs and the design optimization process.
+        The initial training loop in which no designs are optimized but only
+        initial designs, provided by the environment, are used.
+
+        Args:
+            iterations: Integer stating how many training iterations/episodes
+                to use per design.
+
         """
-        iterations_init = self._config["iterations_init"]
-        iterations = self._config["iterations"]
-        design_cycles = self._config["design_cycles"]
-        exploration_strategy = self._config["exploration_strategy"]
+        self._data_design_type = "Initial"
 
-        if self._last_model_checkpoint is not None:
-            self.load_checkpoint(self._last_model_checkpoint)
-            self._env.set_new_design(self._link_lengths)
+        if self._initial_model_path is not None:
+            self._design_counter += 1
+            self.initialize_episode()
+            for _ in range(iterations):
+                self.single_iteration()
+        else:
+            for params in self._env.init_sim_params:
+                self._design_counter += 1
+                self._env.set_new_design(params)
+                self.initialize_episode()
 
-        self._intial_design_loop(iterations_init)
-        self._training_loop(iterations, design_cycles, exploration_strategy)
+                # Reinforcement Learning
+                for _ in range(iterations):
+                    self.single_iteration()
 
     def _training_loop(self, iterations, design_cycles, exploration_strategy):
         """The trianing process which optimizes designs and policies.
@@ -488,30 +465,23 @@ class Coadaptation:
                 optimized_params = list(optimized_params)
             self.initialize_episode()
 
-    def _intial_design_loop(self, iterations):
-        """The initial training loop for initial designs.
+    def run(self):
+        """Runs the Fast Evolution through Actor-Critic RL algorithm.
 
-        The initial training loop in which no designs are optimized but only
-        initial designs, provided by the environment, are used.
-
-        Args:
-            iterations: Integer stating how many training iterations/episodes
-                to use per design.
-
+        First the initial design loop is executed in which the rl-algorithm
+        is exeuted on the initial designs. Then the design-optimization
+        process starts.
+        It is possible to have different numbers of iterations for initial
+        designs and the design optimization process.
         """
-        self._data_design_type = "Initial"
+        if self._initial_model_path is not None:
+            # load previous checkpoints before training starts
+            self.load_do_checkpoint()
+            self.load_rl_checkpoint()
 
-        if self._config["initial_model_path"] is not None:
-            self._design_counter += 1
-            self.initialize_episode()
-            for _ in range(iterations):
-                self.single_iteration()
-        else:
-            for params in self._env.init_sim_params:
-                self._design_counter += 1
-                self._env.set_new_design(params)
-                self.initialize_episode()
-
-                # Reinforcement Learning
-                for _ in range(iterations):
-                    self.single_iteration()
+        self._intial_design_loop(self._config["iterations_init"])
+        self._training_loop(
+            iterations=self._config["iterations"],
+            design_cycles=self._config["design_cycles"],
+            exploration_strategy=self._config["exploration_strategy"],
+        )
