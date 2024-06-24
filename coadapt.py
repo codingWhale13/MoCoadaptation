@@ -333,18 +333,14 @@ class Coadaptation:
         if self._config["save_replay_buffer"]:
             checkpoint["replay_buffer"] = self._replay.get_contents()
 
-        if len(checkpoint.keys()) > 0:
+        if checkpoint:
             save_dir = os.path.join(self.data_folder_experiment, "rl_checkpoints")
+            file_name = f"checkpoint_for_design_{self._design_counter}.chk"
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            torch.save(
-                checkpoint,
-                os.path.join(
-                    save_dir, f"checkpoint_for_design_{self._design_counter}.chk"
-                ),
-            )
+            torch.save(checkpoint, os.path.join(save_dir, file_name))
 
-    def single_iteration(self):
+    def single_rl_iteration(self):
         """A single iteration.
 
         Makes all necessary function calls for a single iterations such as:
@@ -388,12 +384,14 @@ class Coadaptation:
                 self._env.set_new_design(params)
                 self.initialize_episode()
                 for _ in range(iterations):
-                    self.single_iteration()  # reinforcement learning
+                    self.single_rl_iteration()
+                self.save_rl_checkpoint()
         else:
             self._design_counter += 1
             self.initialize_episode()
             for _ in range(iterations):
-                self.single_iteration()
+                self.single_rl_iteration()
+            self.save_rl_checkpoint()
 
     def _training_loop(self, iterations, design_cycles, exploration_strategy):
         """The trianing process which optimizes designs and policies.
@@ -437,7 +435,7 @@ class Coadaptation:
 
             # Reinforcement Learning
             for _ in range(iterations):
-                self.single_iteration()
+                self.single_rl_iteration()
             self.save_rl_checkpoint()
 
             # Design Optimization
