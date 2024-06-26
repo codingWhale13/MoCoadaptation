@@ -272,13 +272,13 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
 
 # Needed for multiobjective class of halfcheetah
 class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
-    def __init__(self, render=False, design=None):
+    def __init__(self, use_vector_Q=False, render=False, design=None):
         self.robot = HalfCheetah(design)
         WalkerBaseBulletEnv.__init__(self, self.robot, render)
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
-        self.reward_dim = 2
+        self.reward_dim = 2 if use_vector_Q else 1
 
     def _isDone(self):
         return False

@@ -17,14 +17,15 @@ class HalfCheetahEnvMO:
         use_wandb=False,
     ):
         self._config = config
-        self._render = config["env"]["render"]
         self._record_video = config["env"]["record_video"]
         self._reward_scaling_energy = reward_scaling_energy
         self._current_design = [1.0] * 6
         self._config_numpy = np.array(self._current_design)
         self.design_params_bounds = [(0.8, 2.0)] * 6
         self._env = HalfCheetahMoBulletEnv(
-            render=self._render, design=self._current_design
+            use_vector_Q=config["rl_algorithm_config"]["use_vector_Q"],
+            render=config["env"]["render"],
+            design=self._current_design,
         )
         self.init_sim_params = [
             [1.0] * 6,
@@ -43,10 +44,17 @@ class HalfCheetahEnvMO:
         self._initial_state = self._env.reset()
 
         if self._record_video:
-            self._video_recorder = BestEpisodesVideoRecorder(
-                path=os.path.join(config["data_folder_experiment"], "videos"),
-                max_videos=5,
-            )
+            if "save_dir" in config["env"]:
+                save_dir = config["env"]["save_dir"]
+            else:
+                save_dir = os.path.join(config["data_folder_experiment"], "videos")
+
+            kwargs = dict()
+            for key in ["record_evy_n_episodes", "max_videos"]:
+                if key in config["env"]:
+                    kwargs[key] = config["env"][key]
+
+            self._video_recorder = BestEpisodesVideoRecorder(path=save_dir, **kwargs)
 
         # Which dimensions in the state vector are design parameters?
         self._design_dims = list(

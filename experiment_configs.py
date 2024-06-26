@@ -6,7 +6,7 @@ sac_pso_batch = {
     "design_cycles": 55,  # Number of design adaptations after the initial designs
     "state_batch_size": 32,  # Size of the batch used during the design optimization process to estimate fitness of design
     "initial_episodes": 3,  # Number of initial episodes for each design before we start the training of the individual networks. Useful if steps per episode is low and we want to fill the replay.
-    "use_gpu": True,  # Use True when GPU should be used for training and inference
+    "use_gpu": False,  # Use True when GPU should be used for training and inference
     "cuda_device": 0,  # Which cuda device to use. Only relevant if you have more than one GPU
     "exploration_strategy": "random",  # Type of design exploration to use - we do usually one greedy design optimization and one random selection of a design
     "design_optim_method": "pso_batch",  # Which design optimization method to use
@@ -52,11 +52,13 @@ sac_pso_batch = {
         indiv_updates=1000,  # Number of training updates per episode for individual networks
         pop_updates=250,  # Number of training updates per episode for population networks
         batch_size=256,  # Batch size
+        use_vector_Q=False, # weather or not to use a vectorized Q function
     ),
     "env": dict(  # Parameters and which environment to use
         env_name="HalfCheetah",  # Name of environment
         render=False,  # Use True if you want to visualize/render the environment
         record_video=False,  # Use True if you want to record videos
+        # video_save_dir=""
     ),
 }
 

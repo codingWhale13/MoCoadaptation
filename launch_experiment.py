@@ -21,7 +21,7 @@ def parse_args():
         type=str,
         help="Type of experiment (choose 'sac_pso_batch' or 'sac_pso_sim')",
         choices=("sac_pso_batch", "sac_pso_sim"),
-        default="sac_pso_sim",
+        default="sac_pso_batch",
     )
     parser.add_argument(
         "--weight-index",
@@ -57,6 +57,12 @@ def parse_args():
         type=str,
         help="If specified, loads model at beginning of training (bootstrapping)",
     )
+    parser.add_argument(
+        "--use-vector-Q",
+        type=bool,
+        help="If True, uses vectorized Q-value function",
+        default=False,
+    )
 
     return parser.parse_args()
 
@@ -74,14 +80,16 @@ def main(config):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    print(f"Custom seed set: {seed}")
+    print(f"Random seed is set to: {seed}")
+
+    config["rl_algorithm_config"]["use_vector_Q"] = args.use_vector_Q
 
     # generate unique experiment name and create folder if not exists
     data_folder = config["data_folder"]
     timestamp = datetime.now().replace(microsecond=0).isoformat().replace(":", "-")
     rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]  # unique identifier
     weight_str = "-".join([str(i) for i in config["weights"][weight_index]])
-    exp_id = f"run_{timestamp}_{rand_id}_{weight_str}"
+    exp_id = f"run_{timestamp}_{rand_id}_{config['run_name']}_{weight_str}"
     data_folder_experiment = os.path.join(data_folder, exp_id)
     config["data_folder_experiment"] = data_folder_experiment
     if not os.path.exists(data_folder_experiment):
