@@ -11,6 +11,7 @@
 
 base_config = {
     # GENERAL OPTIONS
+    "config_version": 1,  # Specifies version number of config (0 is from old repo, 1 is from this repo (codingWhale13/MoCoadaptation)
     "config_id": "base_config",  # Identifier of of this config, for later reference
     "project_name": "MO Co-Adaptation",  # Name of this project, used as project name in wandb
     "run_name": "default",  # Human-readable name of the experiment, part of experiment folder name and used as wandb run name

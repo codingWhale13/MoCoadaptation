@@ -31,17 +31,13 @@ def generate_video(exp_dir, save_dir=None):
     with open(os.path.join(exp_dir, "config.json")) as file:
         config = json.load(file)
 
-    config["initial_model_path"] = exp_dir  # enable model loading
-    config["project_name"] = "MoCo"
-    config["weight_index"] = 7  # TODO: generalize
-    config["use_wandb"] = False
-    config["use_gpu"] = False
-    if save_dir is not None:
-        config["env"]["save_dir"] = save_dir
-    config["env"]["record_video"] = True  # enable video recording
-    config["env"]["record_evy_n_episodes"] = 1  # we'll just run a single episode
+    config["initial_model_dir"] = exp_dir  # enable model loading
+    config["use_gpu"] = False  # no need for GPU when creating videos
 
-    config["rl_algorithm_config"]["use_vector_Q"] = True
+    config["env"]["record_video"] = True  # enable video recording
+    config["video"]["record_evy_n_episodes"] = 1  # we'll just run a single episode
+    if save_dir is not None:
+        config["video"]["video_save_dir"] = save_dir
 
     co = coadapt.Coadaptation(config)  # checkpoint is loaded in __init__
 

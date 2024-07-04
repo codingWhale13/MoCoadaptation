@@ -59,23 +59,33 @@ To compare this with the code structure in this repository: The functionality fr
 
 Different experiments are specified by their config files. These files can be found in the [configs](/configs/) folder. Compared to the previous config, some things have changed:
 
+### Changes from Config Version 0 to Version 1
+
 **Introduced new arguments:**
 
-- `random_seed` (to document random seed in config file)
-- `run_name` (human-readable name of the run)
-- `timestamp` (filed automatically)
-- `run_folder` (filled automatically as `f"{data_folder}/run_{timestamp}_{run_name}"`)
-- `run_id` (unique identifier, filled automatically)
-- `save_replay_buffer` (this allows loading the replay buffer from a checkpoint)
-- `env`/`video_save_dir`
+- `config_version`: Did not exist before, now set to 1
+- `config_id`: String identifier of some config file, such as "sac_pso_batch"
+- `run_name`: Human-readable name of the run
+- `timestamp`: Filled automatically
+- `run_folder`: Filled automatically as `f"{data_folder}/run_{timestamp}_{run_name}"`
+- `run_id`: Unique random hash, filled automatically (was included in file name before)
+- `random_seed`: Random seed used for experiment (was not explicitly stored in config file before)
+- `verbose`: To specify more verbose console output
+- `use_wandb`: To specify if wandb is used for tracking or not (was not explicit before)
+- `initial_model_dir`: If specified, path to checkpoint that should be loaded before training
+- `save_replay_buffer`: Saving the replay buffer allows loading it from a checkpoint later on
+- `video`/*: More control for video recording
+- `rl_algorithm_config`/`use_vector_Q`: Give explicit option to use scalar or vectorized Q function (one value per objective) during training
+
+**Changed arguments for more clarity:**
+
+- `name` is now `config_name`
+- `data_folder_experiment` is now `run_folder` (see above)
+- Instead of specifying all considered preferences in `weights` and then choosing the desired index with `weight_index`, there now only is `weight_preference` which directly specifies the desired weight preference as a tuple
 
 **Removed unused arguments:**
 
 - `use_cpu_for_rollout`
 - `nmbr_random_designs`
 - `iterations_random`
-
-**Changed arguments for more clarity:**
-
-- `name` is now `config_name`
-- `weights` is now `preferences`
+- `load_model` (can be deducted from `initial_model_dir` being None or specified)

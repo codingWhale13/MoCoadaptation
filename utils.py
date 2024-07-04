@@ -225,3 +225,53 @@ class BestEpisodesVideoRecorder:
             30,
             (self._frame_width, self._frame_height),
         )
+
+
+"""
+TODO (if actually needed): upgrade config from old version ("0") to proper version 1
+def upgrade_config(config):
+    if "config_version" in config and config["config_version"] == 1:
+        return config  # nothing to do, already up to date
+
+    config = deepcopy(config)
+
+    config["config_version"] = 1  # upgrading to config version 1
+    config["config_name"] = config["name"]
+
+    config["random_seed"] = None
+    config["timestamp"] = None
+    config["run_id"] = None
+    config["run_name"] = None
+    config["initial_model_dir"] = None
+    # TODO: explicitly store information in config, something like this:
+    if "data_folder_experiment" in config:
+        folder_name = config["data_folder_experiment"].split("/")[-1]
+        config["random_seed"] = int(folder_name.split("_")[-1])
+        config["timestamp"] = " ".join(folder_name.split("__")[0:2]).replace("_", " ")
+        config["run_id"] = folder_name.split("__")[2].split("[")[0]
+        config["run_name"] = config["data_folder_experiment"].split("/")[-2]
+        config["weight_preference"] = (0.7, 0.3)
+
+    config["run_folder"] = config["data_folder_experiment"]
+    config["save_replay_buffer"] = False  # this was not in option in the original repos
+
+    # create key->None entries for other newly introduced parameters
+    config["video"] = dict()
+    config["video"]["video_save_dir"] = None
+    config["video"]["record_evy_n_episodes"] = None
+
+    # remove old keys
+    for key in [
+        "data_folder_experiment",
+        "use_cpu_for_rollout",
+        "nmbr_random_designs",
+        "iterations_random",
+        "weights",
+        "name",
+        "load_model",
+    ]:
+        if key in config:
+            del config[key]
+
+    return config
+"""

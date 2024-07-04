@@ -52,6 +52,12 @@ def parse_args():
         help="Random seed for reproducibility (if None, the seed will be randomly generated)",
     )
     parser.add_argument(
+        "--use-gpu",
+        type=bool,
+        help="Use True to train with GPU and False to train with CPU",
+    )
+
+    parser.add_argument(
         "--verbose",
         type=bool,
         help="Use True for more verbose console output",
@@ -61,12 +67,6 @@ def parse_args():
         type=bool,
         help='Use True to log the run with wandb ("weights and biases")',
     )
-    parser.add_argument(
-        "--use-gpu",
-        type=bool,
-        help="Use True to train with GPU and False to train with CPU",
-    )
-
     return parser.parse_args()
 
 
@@ -75,7 +75,16 @@ def load_config(args):
     config = all_configs[args.config_id]
 
     # Overwrite config values if specified with argparse
-    for arg_name in ["project_name", "run_name"]:
+    for arg_name in [
+        "run_name",
+        "data_folder",
+        "initial_model_dir",
+        "weight_preference",
+        "random_seed",
+        "use_gpu",
+        "verbose",
+        "use_wandb",
+    ]:
         arg_value = getattr(args, arg_name, None)
         if arg_value is not None:
             config[arg_name] = arg_value
