@@ -81,12 +81,12 @@ def copy_network(network_to, network_from, config, force_cpu=False):
 
 
 class BestEpisodesVideoRecorder:
-    def __init__(self, path=None, max_videos=1):
+    def __init__(self, path=None, max_videos=1, record_evy_n_episodes=5):
         self._vid_path = "/tmp/videos" if path is None else path
 
         self._folder_counter = 0
         self._keep_n_best = max(max_videos, 1)
-        self._record_evy_n_episodes = 5
+        self._record_evy_n_episodes = record_evy_n_episodes
 
         self._frame_width = 200
         self._frame_height = 200
@@ -135,18 +135,14 @@ class BestEpisodesVideoRecorder:
             if idx > 1:
                 try:
                     move(
-                        os.path.join(
-                            self._current_vid_path, "video_{}.avi".format(idx - 1)
-                        ),
-                        os.path.join(
-                            self._current_vid_path, "video_{}.avi".format(idx - 2)
-                        ),
+                        os.path.join(self._current_vid_path, f"video_{idx-1}.avi"),
+                        os.path.join(self._current_vid_path, f"video_{idx-2}.avi"),
                     )
                 except:
                     pass
             if (
                 self._current_episode_reward < elem
-            ).any():  # changed for MORL since rewards are not scalarr
+            ).any():  # changed for MORL since rewards are not scalar
                 # self._episodic_rewards = self._episodic_rewards[1:idx] + [self._current_episode_reward] + self._episodic_rewards[idx:] # ORIG
                 self._episodic_rewards = np.concatenate(
                     [

@@ -10,119 +10,123 @@ import torch
 import wandb
 
 import coadapt
-import experiment_configs
+from configs import all_configs
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    # NOTE: For default values, see the specific config files
+
     parser.add_argument(
-        "--config-name",
+        "--config-id",
         type=str,
-        help="Type of experiment (choose 'sac_pso_batch' or 'sac_pso_sim')",
+        help="Name of config file, to specify which config to load",
         choices=("sac_pso_batch", "sac_pso_sim"),
         default="sac_pso_batch",
     )
     parser.add_argument(
-        "--weight-index",
-        type=int,
-        help="Weight index to use (0, 1, ..., 10)",
-        choices=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-        default=0,
-    )
-    parser.add_argument(
-        "--project-name",
-        type=str,
-        help="Name to identify the project",
-        default="Co-Adaptation",
-    )
-    parser.add_argument(
         "--run-name",
         type=str,
-        help="Name to identify the run",
+        help="Human-readable name of the experiment, part of experiment folder name and used as wandb run name",
     )
     parser.add_argument(
-        "--seed",
+        "--data-folder",
+        type=str,
+        help="Path to parent folder of experiment run",
+    )
+    parser.add_argument(
+        "--initial-model-dir",
+        type=str,
+        help="If specified, loads the latest checkpoint from this experiment folder at the beginning of training",
+    )
+    parser.add_argument(
+        "--weight-preference",
+        type=float,
+        nargs="+",
+        help="Objective preference in MORL setting (one non-negative value per objective, should add up to 1)",
+    )
+    parser.add_argument(
+        "--random-seed",
         type=int,
-        help="Random seed for reproducibility (if None, random seed is used)",
+        help="Random seed for reproducibility (if None, the seed will be randomly generated)",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=bool,
+        help="Use True for more verbose console output",
     )
     parser.add_argument(
         "--use-wandb",
         type=bool,
-        help="Whether or not training should be logged with wandb",
-        default=False,
+        help='Use True to log the run with wandb ("weights and biases")',
     )
     parser.add_argument(
-        "--initial-model-path",
-        type=str,
-        help="If specified, loads model at beginning of training (bootstrapping)",
-    )
-    parser.add_argument(
-        "--use-vector-Q",
+        "--use-gpu",
         type=bool,
-        help="If True, uses vectorized Q-value function",
-        default=False,
+        help="Use True to train with GPU and False to train with CPU",
     )
 
     return parser.parse_args()
 
 
-def main(config):
-    weight_index = config["weight_index"]
-    use_wandb = config["use_wandb"]
+def load_config(args):
+    # Load requested config
+    config = all_configs[args.config_id]
 
-    # random seeding
-    seed = config["seed"]
+    # Overwrite config values if specified with argparse
+    for arg_name in ["project_name", "run_name"]:
+        arg_value = getattr(args, arg_name, None)
+        if arg_value is not None:
+            config[arg_name] = arg_value
+
+    # Add experiment ID to config (NOTE: os.urandom is independent of random seeding)
+    config["run_id"] = hashlib.md5(os.urandom(128)).hexdigest()[:8]
+
+    # Add current timestamp to config (without ":" for cross-platform compatibility)
+    timestamp = datetime.now().replace(microsecond=0).isoformat().replace(":", "-")
+    config["timestamp"] = timestamp
+
+    # Create run folder
+    run_name = config["run_name"]
+    run_folder = os.path.join(config["data_folder"], f"run_{timestamp}_{run_name}")
+    config["run_folder"] = run_folder
+    if not os.path.exists(run_folder):
+        os.makedirs(run_folder)
+
+    # Store config
+    with open(os.path.join(run_folder, "config.json"), "w") as file:
+        file.write(json.dumps(config, indent=2))
+
+    # Apply random seeding
+    seed = config["random_seed"]
     if seed is None:
         seed = random.randint(0, 2**32 - 1)
-        config["seed"] = seed  # save generated seed to config
-        print(f"Custom seed set not set, using random seed {seed}")
+        config["random_seed"] = seed  # Save generated seed to config
+        if config["verbose"]:
+            print(f"Setting random_seed to {seed}")
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    print(f"Random seed is set to: {seed}")
 
-    config["rl_algorithm_config"]["use_vector_Q"] = args.use_vector_Q
+    if config["verbose"]:
+        print("\n=== CONFIG FILE USED FOR EXPERIMENT ===")
+        print(json.dumps(config, sort_keys=True, indent=4))
+        print("=======================================\n")
 
-    # generate unique experiment name and create folder if not exists
-    data_folder = config["data_folder"]
-    timestamp = datetime.now().replace(microsecond=0).isoformat().replace(":", "-")
-    rand_id = hashlib.md5(os.urandom(128)).hexdigest()[:8]  # unique identifier
-    weight_str = "-".join([str(i) for i in config["weights"][weight_index]])
-    exp_id = f"run_{timestamp}_{rand_id}_{config['run_name']}_{weight_str}"
-    data_folder_experiment = os.path.join(data_folder, exp_id)
-    config["data_folder_experiment"] = data_folder_experiment
-    if not os.path.exists(data_folder_experiment):
-        os.makedirs(data_folder_experiment)
+    return config
 
-    # store config
-    with open(os.path.join(data_folder_experiment, "config.json"), "w") as fd:
-        fd.write(json.dumps(config, indent=2))
 
-    # start training
+def launch_experiment(config):
     co = coadapt.Coadaptation(config)
-    co.run()
+    co.run()  # run training loop
 
-    if use_wandb:
+    if config["use_wandb"]:
         wandb.finish()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    config = load_config(args)
 
-    config = experiment_configs.config_dict[args.config_name]
-
-    run_name = args.run_name
-    if run_name is None:
-        run_name = f"default-run-weight-{config['weights'][args.weight_index]}"
-
-    config["project_name"] = args.project_name
-    config["run_name"] = args.run_name
-    config["weight_index"] = args.weight_index
-    config["seed"] = args.seed
-    config["use_wandb"] = args.use_wandb
-    config["initial_model_path"] = args.initial_model_path
-
-    print(json.dumps(config, sort_keys=True, indent=4))
-
-    main(config)
+    launch_experiment(config)

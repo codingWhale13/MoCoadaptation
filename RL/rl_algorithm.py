@@ -1,7 +1,7 @@
 class RL_algorithm:
     def __init__(self, config, env, replay, networks):
         self._config = config
-        self.file_str = config["data_folder_experiment"]
+        self.file_str = config["run_folder"]
 
         self._env = env
         self._replay = replay

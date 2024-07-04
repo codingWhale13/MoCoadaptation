@@ -27,6 +27,7 @@ class HalfCheetahEnvMO:
             render=config["env"]["render"],
             design=self._current_design,
         )
+        self.reward_dim = self._env.reward_dim
         self.init_sim_params = [
             [1.0] * 6,
             [1.41, 0.96, 1.97, 1.73, 1.97, 1.17],
@@ -44,15 +45,15 @@ class HalfCheetahEnvMO:
         self._initial_state = self._env.reset()
 
         if self._record_video:
-            if "save_dir" in config["env"]:
-                save_dir = config["env"]["save_dir"]
+            if config["video"]["video_save_dir"] is not None:
+                save_dir = config["video"]["video_save_dir"]
             else:
-                save_dir = os.path.join(config["data_folder_experiment"], "videos")
+                save_dir = os.path.join(config["run_folder"], "videos")
 
             kwargs = dict()
             for key in ["record_evy_n_episodes", "max_videos"]:
-                if key in config["env"]:
-                    kwargs[key] = config["env"][key]
+                if key in config["video"]:
+                    kwargs[key] = config["video"][key]
 
             self._video_recorder = BestEpisodesVideoRecorder(path=save_dir, **kwargs)
 

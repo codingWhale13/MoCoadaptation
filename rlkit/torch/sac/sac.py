@@ -122,13 +122,17 @@ class SACTrainer(TorchTrainer):
             alpha = self._alpha
 
         q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions), self.qf2(obs, new_obs_actions)
+            self.qf1(obs, new_obs_actions),
+            self.qf2(obs, new_obs_actions),
         )
-        q_new_actions_weighted = torch.matmul(q_new_actions, self.weight_pref)
         if self._use_gpu:
-            q_new_actions_weighted = q_new_actions_weighted.to("cuda")
+            q_new_actions = q_new_actions.to("cuda")
 
-        policy_loss = (alpha * log_pi - q_new_actions_weighted).mean()
+        if self.env.reward_dim > 1:
+            # weight q values by preference
+            q_new_actions = torch.matmul(q_new_actions, self.weight_pref)
+
+        policy_loss = (alpha * log_pi - q_new_actions).mean()
 
         """
         QF Loss

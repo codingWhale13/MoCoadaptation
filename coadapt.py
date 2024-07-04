@@ -7,11 +7,13 @@ import numpy as np
 import torch
 import wandb
 
+
 from DO.pso_batch import PSOBatch
 from DO.pso_sim import PSOSimulation
 from Environments.evoenvsMO import HalfCheetahEnvMO
 from RL.evoreplay import EvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
+import rlkit.torch.pytorch_util as ptu
 
 
 def select_env(env_name):
@@ -40,24 +42,22 @@ def select_design_opt_algo(algo_name):
 class Coadaptation:
     def __init__(self, config):
         project_name = config["project_name"]
-        run_name = config["run_name"]
-        weight_index = config["weight_index"]
-        self._initial_model_path = config["initial_model_path"]
+        self._initial_model_dir = config["initial_model_dir"]
 
         self._use_wandb = config["use_wandb"]
         self._use_gpu = config["use_gpu"]
-        self.data_folder_experiment = config["data_folder_experiment"]
+        self.run_folder = config["run_folder"]
 
         self._config = config
         utils.move_to_cuda(self._config)
 
         if self._use_wandb:
-            wandb.init(project=project_name, name=run_name)
+            wandb.init(project=project_name, name=config["run_name"])
 
         self._episode_length = config["steps_per_episodes"]
 
-        weights = config["weights"][weight_index]
-        self._weights_pref = torch.tensor(weights).reshape(2, 1)
+        weight_pref = config["weight_preference"]
+        self._weights_pref = torch.tensor(weight_pref).reshape(2, 1)
         if config["use_gpu"]:
             self._weights_pref = self._weights_pref.to("cuda")
 
@@ -78,9 +78,7 @@ class Coadaptation:
 
         # initialize RL algo
         self._rl_algo_class = select_rl_algo(config["rl_method"])
-        self._networks = self._rl_algo_class.create_networks(
-            env=self._env, config=config
-        )
+        self._networks = self._rl_algo_class.create_networks(self._env, config=config)
         self._rl_algo = self._rl_algo_class(
             config=config,
             env=self._env,
@@ -95,25 +93,28 @@ class Coadaptation:
         else:
             utils.move_to_cpu()
             self._policy_cpu = self._rl_algo_class.get_policy_network(
-                SoftActorCritic.create_networks(env=self._env, config=config)[
-                    "individual"
-                ]
+                SoftActorCritic.create_networks(self._env, config=config)["individual"]
             )
 
         # initialize DO algo
         do_algo_class = select_design_opt_algo(config["design_optim_method"])
         self._do_alg = do_algo_class(config=config, replay=self._replay, env=self._env)
 
+        # initialize counters
         self._last_single_iteration_time = 0
         self._design_counter = 0
         self._episode_counter = 0
-        self._data_design_type = (
-            "Initial" if self._initial_model_path is None else "Pre-trained"
-        )
 
-    def load_do_checkpoint(self):
-        """Loads last checkpoint of design opimization process."""
-        do_dir = os.path.join(self._initial_model_path, "do_checkpoints")
+        # load model from checkpoint if available
+        if self._initial_model_dir is None:
+            self._data_design_type = "Initial"
+        else:
+            self._data_design_type = "Pre-trained"
+            self._load_checkpoint(self._initial_model_dir)
+
+    def _load_checkpoint(self, exp_dir):
+        # 1. load last design checkpoint
+        do_dir = os.path.join(exp_dir, "do_checkpoints")
         file_path = max(os.listdir(do_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
 
         rows = []
@@ -122,33 +123,29 @@ class Coadaptation:
             for row in reader:
                 rows.append(row)
 
-        self._link_lengths = np.array(rows[1], dtype=float)
-        self._env.set_new_design(self._link_lengths)
+        link_lengths = np.array(rows[1], dtype=float)
+        self._env.set_new_design(link_lengths)
 
-    def load_rl_checkpoint(self):
-        """Loads last checkpoint of RL agent from disk."""
-        load_dir = os.path.join(self._initial_model_path, "rl_checkpoints")
+        # 2. load last RL checkpoint
+        load_dir = os.path.join(exp_dir, "rl_checkpoints")
         filename = max(os.listdir(load_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
-        chk_path = os.path.join(load_dir, filename)
-        # chk_path = "/scratch/work/kielen1/experiments/data_exp_sac_pso_sim/run_2024-06-20T16-46-10_436c98ae_0.5-0.5/rl_checkpoints/checkpoint_design_2.chk"
+        network_path = os.path.join(load_dir, filename)
 
-        model_data = torch.load(chk_path)
-        # original author's NOTE: adding `map_location=ptu.device` needs to be fixed
+        network_data = torch.load(network_path, map_location=ptu.device)
 
-        if "population" in model_data.keys():
-            model_data_pop = model_data["population"]
-            for key, net in self._networks["population"].items():
-                params = model_data_pop[key]
-                net.load_state_dict(params)
+        model_data_pop = network_data["population"]
+        for key, net in self._networks["population"].items():
+            params = model_data_pop[key]
+            net.load_state_dict(params)
+        model_data_ind = network_data["individual"]
+        for key, net in self._networks["individual"].items():
+            params = model_data_ind[key]
+            net.load_state_dict(params)
 
-        if "individual" in model_data.keys():
-            model_data_ind = model_data["individual"]
-            for key, net in self._networks["individual"].items():
-                params = model_data_ind[key]
-                net.load_state_dict(params)
-
-        if "replay_buffer" in model_data.keys():
-            self._replay.set_contents(model_data["replay_buffer"])
+        replay_path = os.path.join(load_dir, "latest_replay_buffer_0.chk")
+        if os.path.isfile(replay_path):
+            replay_buffer = torch.load(replay_path, map_location=torch.device("cpu"))
+            self._replay.set_contents(replay_buffer)
 
     def initialize_episode(self):
         """Initializations required before the first episode.
@@ -298,7 +295,7 @@ class Coadaptation:
         throughout the reinforcement learning process on the current design.
         """
         current_design = self._env.get_current_design()
-        save_dir = os.path.join(self.data_folder_experiment, "do_checkpoints")
+        save_dir = os.path.join(self.run_folder, "do_checkpoints")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
@@ -317,28 +314,33 @@ class Coadaptation:
 
     def save_rl_checkpoint(self):
         """Saves the networks and replay buffer to disk if specified in config."""
-        checkpoint = dict()
+        save_dir = os.path.join(self.run_folder, "rl_checkpoints")
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
 
         if self._config["save_networks"]:
+            # create new checkpoint for model parameters
+            network_checkpoint = dict()
+
             checkpoints_pop = {}
             for key, net in self._networks["population"].items():
                 checkpoints_pop[key] = net.state_dict()
-            checkpoint["population"] = checkpoints_pop
+            network_checkpoint["population"] = checkpoints_pop
 
             checkpoints_ind = {}
             for key, net in self._networks["individual"].items():
                 checkpoints_ind[key] = net.state_dict()
-            checkpoint["individual"] = checkpoints_ind
+            network_checkpoint["individual"] = checkpoints_ind
+
+            file_name = f"networks_for_design_{self._design_counter}.chk"
+            torch.save(network_checkpoint, os.path.join(save_dir, file_name))
 
         if self._config["save_replay_buffer"]:
-            checkpoint["replay_buffer"] = self._replay.get_contents()
-
-        if checkpoint:
-            save_dir = os.path.join(self.data_folder_experiment, "rl_checkpoints")
-            file_name = f"checkpoint_for_design_{self._design_counter}.chk"
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            torch.save(checkpoint, os.path.join(save_dir, file_name))
+            # overwrite last checkpoint for replay buffer
+            # (saving it for each design would consume a large amount of memory)
+            replay_buffer_checkpoint = self._replay.get_contents()
+            file_name = f"latest_replay_buffer_0.chk"  # "_0" is for convenient loading
+            torch.save(replay_buffer_checkpoint, os.path.join(save_dir, file_name))
 
     def single_rl_iteration(self):
         """A single iteration.
@@ -378,7 +380,7 @@ class Coadaptation:
         """
         self._data_design_type = "Initial"
 
-        if self._initial_model_path is None:
+        if self._initial_model_dir is None:
             for params in self._env.init_sim_params:
                 self._design_counter += 1
                 self._env.set_new_design(params)
@@ -469,11 +471,6 @@ class Coadaptation:
         It is possible to have different numbers of iterations for initial
         designs and the design optimization process.
         """
-        if self._initial_model_path is not None:
-            # load previous checkpoints before training starts
-            self.load_do_checkpoint()
-            self.load_rl_checkpoint()
-
         self._intial_design_loop(self._config["iterations_init"])
         self._training_loop(
             iterations=self._config["iterations"],

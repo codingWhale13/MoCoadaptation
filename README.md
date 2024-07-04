@@ -54,3 +54,28 @@ The original `MoCoadaptation` has two branches which coincide with two branches 
 2. `MoCoadaptation/interactive` extends this by vectorizing the Q-function and allowing to load a model from a checkpoint to fine-tune it "interactively". This branch goes together with `rlkitMO/coadapt_interactive`.
 
 To compare this with the code structure in this repository: The functionality from the second scenario is now on the `master` branch, without a direct dependency to `rlkitMO` because the SAC implementation is included in this repository.
+
+## Config Arguments
+
+Different experiments are specified by their config files. These files can be found in the [configs](/configs/) folder. Compared to the previous config, some things have changed:
+
+**Introduced new arguments:**
+
+- `random_seed` (to document random seed in config file)
+- `run_name` (human-readable name of the run)
+- `timestamp` (filed automatically)
+- `run_folder` (filled automatically as `f"{data_folder}/run_{timestamp}_{run_name}"`)
+- `run_id` (unique identifier, filled automatically)
+- `save_replay_buffer` (this allows loading the replay buffer from a checkpoint)
+- `env`/`video_save_dir`
+
+**Removed unused arguments:**
+
+- `use_cpu_for_rollout`
+- `nmbr_random_designs`
+- `iterations_random`
+
+**Changed arguments for more clarity:**
+
+- `name` is now `config_name`
+- `weights` is now `preferences`
