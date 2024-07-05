@@ -56,6 +56,8 @@ base_config = {
     "exploration_strategy": "random",  # Type of design exploration to use - we do usually one greedy design optimization and one random selection of a design (NOTE: not currently used)
     # REINFORCEMENT LEARNING (RL) PARAMETERS
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
+    "use_vector_Q": False,  # Use True to use Q-function with vector output, one value per objective
+    "condition_on_preference": True,  # Use True to condition the policy and Q networks on the weight preference
     "rl_algorithm_config": dict(
         algo_params=dict(  # Parameters for the RL learner for the individual networks
             discount=0.99,
@@ -81,6 +83,5 @@ base_config = {
         copy_from_gobal=True,  # Use True to pre-initialize the individual network with the global network
         indiv_updates=1000,  # Number of training updates per episode for individual networks
         pop_updates=250,  # Number of training updates per episode for population networks
-        use_vector_Q=False,  # Use true to use Q-function with vector output, one value per objective
     ),
 }
