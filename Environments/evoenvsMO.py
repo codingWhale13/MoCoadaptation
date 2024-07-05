@@ -23,9 +23,7 @@ class HalfCheetahEnvMO:
         self._config_numpy = np.array(self._current_design)
         self.design_params_bounds = [(0.8, 2.0)] * 6
         self._env = HalfCheetahMoBulletEnv(
-            use_vector_Q=config["rl_algorithm_config"]["use_vector_Q"],
-            render=config["env"]["render"],
-            design=self._current_design,
+            render=config["env"]["render"], design=self._current_design
         )
         self.reward_dim = self._env.reward_dim
         self.init_sim_params = [
