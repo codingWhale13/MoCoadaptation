@@ -4,8 +4,6 @@ from collections import OrderedDict
 from typing import Iterable
 from torch import nn as nn
 
-from rlkit.core.batch_rl_algorithm import BatchRLAlgorithm
-from rlkit.core.online_rl_algorithm import OnlineRLAlgorithm
 from rlkit.torch.core import np_to_pytorch_batch
 
 
@@ -22,26 +20,6 @@ class Trainer(object, metaclass=abc.ABCMeta):
 
     def get_diagnostics(self):
         return {}
-
-
-class TorchOnlineRLAlgorithm(OnlineRLAlgorithm):
-    def to(self, device):
-        for net in self.trainer.networks:
-            net.to(device)
-
-    def training_mode(self, mode):
-        for net in self.trainer.networks:
-            net.train(mode)
-
-
-class TorchBatchRLAlgorithm(BatchRLAlgorithm):
-    def to(self, device):
-        for net in self.trainer.networks:
-            net.to(device)
-
-    def training_mode(self, mode):
-        for net in self.trainer.networks:
-            net.train(mode)
 
 
 class TorchTrainer(Trainer, metaclass=abc.ABCMeta):
