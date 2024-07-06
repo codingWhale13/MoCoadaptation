@@ -18,7 +18,13 @@ def get_dim(space):
 
 
 class EnvReplayBuffer(SimpleReplayBuffer):
-    def __init__(self, max_replay_buffer_size, env, env_info_sizes=None):
+    def __init__(
+        self,
+        max_replay_buffer_size,
+        env,
+        env_info_sizes=None,
+        condition_on_preference=False,
+    ):
         """
         :param max_replay_buffer_size:
         :param env:
@@ -33,9 +39,13 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             else:
                 env_info_sizes = dict()
 
+        observation_dim = get_dim(self._ob_space)
+        if condition_on_preference:
+            observation_dim += env.reward_dim
+
         super().__init__(
             max_replay_buffer_size=max_replay_buffer_size,
-            observation_dim=get_dim(self._ob_space),
+            observation_dim=observation_dim,
             action_dim=get_dim(self._action_space),
             env_info_sizes=env_info_sizes,
         )

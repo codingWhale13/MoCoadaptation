@@ -74,6 +74,7 @@ class Coadaptation:
             self._env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
+            condition_on_preference=config["condition_on_preference"],
         )
 
         # initialize RL algo
@@ -172,6 +173,10 @@ class Coadaptation:
         buffer.
         """
         state = self._env.reset()
+        if self._config["condition_on_preference"]:
+            weights_pref_np = self._weights_pref.numpy().squeeze()
+            state = np.concatenate((state, weights_pref_np))
+
         nmbr_of_steps = 0
         done = False
 
@@ -200,6 +205,9 @@ class Coadaptation:
             nmbr_of_steps += 1
             action, _ = self._policy_cpu.get_action(state)
             new_state, reward, done, info = self._env.step(action)
+            if self._config["condition_on_preference"]:
+                new_state = np.concatenate((new_state, weights_pref_np))
+
             # TODO this has to be fixed _variant_spec
             reward = reward * self._reward_scale
             terminal = np.array([done])
@@ -224,6 +232,10 @@ class Coadaptation:
 
         """
         state = self._env.reset()
+        if self._config["condition_on_preference"]:
+            weights_pref_np = self._weights_pref.numpy().squeeze()
+            state = np.concatenate((state, weights_pref_np))
+
         done = False
         reward_ep = np.array(
             [0, 0]
@@ -231,7 +243,8 @@ class Coadaptation:
         # reward_original = np.array([0, 0])# SORL #reward_original = 0.0  # -> same
         action_cost = 0.0
         nmbr_of_steps = 0
-        states_arr = np.empty((0, 23))  # state saving
+
+        states_arr = np.empty((0, state.shape[-1]))  # state saving
         actions_arr = np.empty((0, 6))  # action saving
 
         if self._episode_counter < self._config["initial_episodes"]:
@@ -258,6 +271,9 @@ class Coadaptation:
             nmbr_of_steps += 1
             action, _ = self._policy_cpu.get_action(state, deterministic=True)
             new_state, reward, done, info = self._env.step(action)
+            if self._config["condition_on_preference"]:
+                new_state = np.concatenate((new_state, weights_pref_np))
+
             # print(action.shape)
             # print(state.shape)
             states_arr = np.vstack(
@@ -412,7 +428,7 @@ class Coadaptation:
         """
         self.initialize_episode()
         # TODO fix the following
-        initial_state = self._env._env.reset()
+        self._env._env.reset()
 
         self._data_design_type = "Optimized"
 

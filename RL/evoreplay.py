@@ -6,22 +6,33 @@ from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 
 class EvoReplayLocalGlobalStart(ReplayBuffer):
     def __init__(
-        self, env, max_replay_buffer_size_species, max_replay_buffer_size_population
+        self,
+        env,
+        max_replay_buffer_size_species,
+        max_replay_buffer_size_population,
+        condition_on_preference=False,
     ):
         self._species_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_species
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_species,
+            condition_on_preference=condition_on_preference,
         )
         self._population_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_population,
+            condition_on_preference=condition_on_preference,
         )
         self._init_state_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_population,
+            condition_on_preference=condition_on_preference,
         )
         self._env = env
         self._max_replay_buffer_size_species = max_replay_buffer_size_species
         self._mode = "species"
         self._ep_counter = 0
         self._expect_init_state = True
+        self._condition_on_preference = condition_on_preference
         print("Using EvoReplayLocalGlobalStart as replay buffer")
 
     def add_sample(
@@ -113,7 +124,9 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
 
     def reset_species_buffer(self):
         self._species_buffer = EnvReplayBuffer(
-            env=self._env, max_replay_buffer_size=self._max_replay_buffer_size_species
+            env=self._env,
+            max_replay_buffer_size=self._max_replay_buffer_size_species,
+            condition_on_preference=self._condition_on_preference,
         )
         self._ep_counter = 0
 

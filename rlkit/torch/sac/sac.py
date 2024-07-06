@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -8,8 +9,6 @@ from torch import nn as nn
 import rlkit.torch.pytorch_util as ptu
 from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchTrainer
-
-# import wandb # for logging loss fpr QF1, QF2 and policy loss
 
 
 class SACTrainer(TorchTrainer):
@@ -21,8 +20,9 @@ class SACTrainer(TorchTrainer):
         qf2,
         target_qf1,
         target_qf2,
-        weight_pref,  # for MORL
-        wandb_instance,  # for MORL
+        weight_pref,
+        use_vector_Q=False,
+        wandb_instance=None,
         discount=0.99,
         reward_scale=1.0,
         policy_lr=1e-3,
@@ -42,7 +42,7 @@ class SACTrainer(TorchTrainer):
         super().__init__()
         self.weight_pref = weight_pref  # MORL weights
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
-
+        self.use_vector_Q = use_vector_Q
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -128,7 +128,7 @@ class SACTrainer(TorchTrainer):
         if self._use_gpu:
             q_new_actions = q_new_actions.to("cuda")
 
-        if self.env.reward_dim > 1:
+        if self.use_vector_Q:
             # weight q values by preference
             q_new_actions = torch.matmul(q_new_actions, self.weight_pref)
 
@@ -137,8 +137,10 @@ class SACTrainer(TorchTrainer):
         """
         QF Loss
         """
+
         q1_pred = self.qf1(obs, actions)
         q2_pred = self.qf2(obs, actions)
+
         # Make sure policy accounts for squashing functions like tanh correctly!
         new_next_actions, _, _, new_log_pi, *_ = self.policy(
             next_obs,

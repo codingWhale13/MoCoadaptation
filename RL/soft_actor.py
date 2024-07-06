@@ -56,8 +56,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._ind_qf1_target,
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
-            weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            weight_pref=self._weight_pref,
+            use_vector_Q=config["use_vector_Q"],
+            wandb_instance=self._wandb_instance,
             use_gpu=use_gpu,
             **self._variant_spec,
         )
@@ -70,8 +71,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._pop_qf1_target,
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning=False,
-            weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            weight_pref=self._weight_pref,
+            use_vector_Q=config["use_vector_Q"],
+            wandb_instance=self._wandb_instance,
             use_gpu=use_gpu,
             **self._variant_pop,
         )
@@ -96,8 +98,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
             # alt_alpha = self._alt_alpha,
-            weight_pref=self._weight_pref,  # Needed to pass the weight_preferences # MORL
-            wandb_instance=self._wandb_instance,  # Need to pass the wandb instance to the sac.py in rlkit # MORL # uncomment to track with wandb
+            weight_pref=self._weight_pref,
+            use_vector_Q=self._config["use_vector_Q"],
+            wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
             **self._variant_spec,
         )
@@ -177,31 +180,38 @@ class SoftActorCritic(RL_algorithm):
         action_dim = int(np.prod(env.action_space.shape))
         net_size = config["rl_algorithm_config"]["net_size"]
         hidden_sizes = [net_size] * config["rl_algorithm_config"]["network_depth"]
-        # hidden_sizes = [net_size, net_size, net_size]
-        reward_dim = env._env.reward_dim
+
+        q_input_size = obs_dim + action_dim
+        policy_input_size = obs_dim
+        if config["condition_on_preference"]:
+            # additionaly take weight preference as input to Q networks and policy
+            q_input_size += env.reward_dim
+            policy_input_size += env.reward_dim
+        q_output_size = env.reward_dim if config["use_vector_Q"] else 1
+
         qf1 = FlattenMlp(
             hidden_sizes=hidden_sizes,
-            input_size=obs_dim + action_dim,
-            output_size=reward_dim,
+            input_size=q_input_size,
+            output_size=q_output_size,
         ).to(device=ptu.device)
         qf2 = FlattenMlp(
             hidden_sizes=hidden_sizes,
-            input_size=obs_dim + action_dim,
-            output_size=reward_dim,
+            input_size=q_input_size,
+            output_size=q_output_size,
         ).to(device=ptu.device)
         qf1_target = FlattenMlp(
             hidden_sizes=hidden_sizes,
-            input_size=obs_dim + action_dim,
-            output_size=reward_dim,
+            input_size=q_input_size,
+            output_size=q_output_size,
         ).to(device=ptu.device)
         qf2_target = FlattenMlp(
             hidden_sizes=hidden_sizes,
-            input_size=obs_dim + action_dim,
-            output_size=reward_dim,
+            input_size=q_input_size,
+            output_size=q_output_size,
         ).to(device=ptu.device)
         policy = TanhGaussianPolicy(
             hidden_sizes=hidden_sizes,
-            obs_dim=obs_dim,
+            obs_dim=policy_input_size,
             action_dim=action_dim,
         ).to(device=ptu.device)
 
