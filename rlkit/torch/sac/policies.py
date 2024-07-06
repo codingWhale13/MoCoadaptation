@@ -30,14 +30,9 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
     If return_log_prob is False (default), log_prob = None
         This is done because computing the log_prob can be a bit expensive.
     """
+
     def __init__(
-            self,
-            hidden_sizes,
-            obs_dim,
-            action_dim,
-            std=None,
-            init_w=1e-3,
-            **kwargs
+        self, hidden_sizes, obs_dim, action_dim, std=None, init_w=1e-3, **kwargs
     ):
         super().__init__(
             hidden_sizes,
@@ -67,11 +62,11 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         return eval_np(self, obs_np, deterministic=deterministic)[0]
 
     def forward(
-            self,
-            obs,
-            reparameterize=True,
-            deterministic=False,
-            return_log_prob=False,
+        self,
+        obs,
+        reparameterize=True,
+        deterministic=False,
+        return_log_prob=False,
     ):
         """
         :param obs: Observation
@@ -107,10 +102,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
                     action, pre_tanh_value = tanh_normal.sample(
                         return_pretanh_value=True
                     )
-                log_prob = tanh_normal.log_prob(
-                    action,
-                    pre_tanh_value=pre_tanh_value
-                )
+                log_prob = tanh_normal.log_prob(action, pre_tanh_value=pre_tanh_value)
                 log_prob = log_prob.sum(dim=-1, keepdim=True)
             else:
                 if reparameterize is True:
@@ -119,8 +111,14 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
                     action = tanh_normal.sample()
 
         return (
-            action, mean, log_std, log_prob, entropy, std,
-            mean_action_log_prob, pre_tanh_value,
+            action,
+            mean,
+            log_std,
+            log_prob,
+            entropy,
+            std,
+            mean_action_log_prob,
+            pre_tanh_value,
         )
 
 
@@ -130,5 +128,4 @@ class MakeDeterministic(nn.Module, Policy):
         self.stochastic_policy = stochastic_policy
 
     def get_action(self, observation):
-        return self.stochastic_policy.get_action(observation,
-                                                 deterministic=True)
+        return self.stochastic_policy.get_action(observation, deterministic=True)

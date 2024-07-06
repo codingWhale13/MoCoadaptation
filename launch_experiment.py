@@ -13,6 +13,21 @@ import coadapt
 from configs import all_configs
 
 
+def strtobool(val):
+    """Convert a string representation of truth to True or False.
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else. Similar to deprecated distutils.util.strtobool.
+    """
+    val = val.lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return False
+    else:
+        raise ValueError(f"Invalid truth value '{val}'")
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -22,7 +37,7 @@ def parse_args():
         "--config-id",
         type=str,
         help="Name of config file, to specify which config to load",
-        choices=("sac_pso_batch", "sac_pso_sim"),
+        choices=("sac_pso_batch", "sac_pso_sim", "sac_pso_batch_vec"),
         default="sac_pso_batch",
     )
     parser.add_argument(
@@ -53,18 +68,17 @@ def parse_args():
     )
     parser.add_argument(
         "--use-gpu",
-        type=bool,
+        type=strtobool,
         help="Use True to train with GPU and False to train with CPU",
     )
-
     parser.add_argument(
         "--verbose",
-        type=bool,
+        type=strtobool,
         help="Use True for more verbose console output",
     )
     parser.add_argument(
         "--use-wandb",
-        type=bool,
+        type=strtobool,
         help='Use True to log the run with wandb ("weights and biases")',
     )
     return parser.parse_args()
