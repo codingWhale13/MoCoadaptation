@@ -18,7 +18,7 @@ class PSOBatch(DesignOptimization):
         else:
             self._state_batch_size = 32
 
-    def optimize_design(self, design, q_network, policy_network, weights):
+    def optimize_design(self, design, q_network, policy_network, weights, verbose=False):
         self._replay.set_mode("start")
         initial_state = self._replay.random_batch(self._state_batch_size)
         initial_state = initial_state["observations"]
@@ -79,7 +79,7 @@ class PSOBatch(DesignOptimization):
 
         # Perform optimization
         cost, new_design = optimizer.optimize(
-            f_qval, print_step=100, iters=250, verbose=3
+            f_qval, print_step=100, iters=250, verbose=verbose
         )  # , n_processes=2)
 
         return new_design

@@ -76,8 +76,6 @@ class HalfCheetahEnvMO:
         info["orig_action_cost"] = 0.1 * np.mean(np.square(a))
         info["orig_reward"] = reward
         reward[1] *= self._reward_scaling_energy
-        if self._use_wandb:
-            wandb.log({"Reward run": reward[0], "Reward energy": reward[1]})
 
         if self._record_video:
             self._video_recorder.step(

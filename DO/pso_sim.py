@@ -11,14 +11,10 @@ class PSOSimulation(DesignOptimization):
         self._env = env
 
         self._episode_length = self._config["steps_per_episodes"]
-        # TODO Make this independent of rl_algo config
-        self._reward_scale = self._config["rl_algorithm_config"]["algo_params"][
-            "reward_scale"
-        ]
 
     def optimize_design(
-        self, design, q_network, policy_network, weights
-    ):  # weights needed for MORL
+        self, design, q_network, policy_network, weights, verbose=False
+    ):
         # Important: We reset the design of the environment. Previous design
         #   will be lost
 
@@ -39,8 +35,7 @@ class PSOSimulation(DesignOptimization):
             while not (done) and nmbr_of_steps <= self._episode_length:
                 nmbr_of_steps += 1
                 action, _ = policy_network.get_action(state, deterministic=True)
-                new_state, reward, done, info = self._env.step(action)
-                reward = reward * self._reward_scale
+                new_state, reward, done, _ = self._env.step(action)
                 reward = reward.reshape(1, 2)
                 # reward_episode.append(float(reward)) # SORL original
                 reward = np.matmul(
@@ -79,7 +74,7 @@ class PSOSimulation(DesignOptimization):
 
         # Perform optimization
         cost, new_design = optimizer.optimize(
-            f_qval, print_step=100, iters=30, verbose=3
+            f_qval, print_step=100, iters=30, verbose=verbose
         )  # , n_processes=2)
 
         if video_recording_was_enabled:
