@@ -27,7 +27,7 @@ base_config = {
     "save_networks": True,  # Use True to save checkpoints (RL network and design specification) for each design
     "save_replay_buffer": False,  # Use True to save the most recent RL replay buffer (can be a few GB large)
     # GPU OPTIONS
-    "use_gpu": False,  # Use True to use GPU for training and inference
+    "use_gpu": True,  # Use True to use GPU for training and inference
     "cuda_device": 0,  # Specifies which cuda device to use (only relevant in case of multiple GPUs)
     # ENVIRONMENT PARAMETERS
     "env": dict(

@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument(
         "--data-folder",
         type=str,
-        help="Path to parent folder of experiment run",
+        help="Path to parent folder of experiment run (if not set, sensible default is used)",
     )
     parser.add_argument(
         "--save-replay-buffer",

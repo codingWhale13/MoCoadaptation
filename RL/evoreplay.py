@@ -34,7 +34,7 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
         self._ep_counter = 0
         self._expect_init_state = True
         self._condition_on_preference = condition_on_preference
-        
+
         if verbose:
             print("Using EvoReplayLocalGlobalStart as replay buffer")
 
@@ -54,6 +54,16 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             **kwargs,
         )
 
+        self._population_buffer.add_sample(
+            observation=observation,
+            action=action,
+            reward=reward,
+            next_observation=next_observation,
+            terminal=terminal,
+            env_info={},
+            **kwargs,
+        )
+        
         if self._expect_init_state:
             self._init_state_buffer.add_sample(
                 observation=observation,
@@ -66,17 +76,6 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             )
             self._init_state_buffer.terminate_episode()
             self._expect_init_state = False
-
-        if self._ep_counter >= 0:
-            self._population_buffer.add_sample(
-                observation=observation,
-                action=action,
-                reward=reward,
-                next_observation=next_observation,
-                terminal=terminal,
-                env_info={},
-                **kwargs,
-            )
 
     def terminate_episode(self):
         """

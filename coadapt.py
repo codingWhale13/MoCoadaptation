@@ -67,6 +67,12 @@ class Coadaptation:
         if self._use_wandb:
             wandb.init(project=config["project_name"], name=config["run_name"])
 
+        # Set device to GPU or CPU^
+        if self._use_gpu:
+            utils.move_to_cuda(self._cuda_device)
+        else:
+            utils.move_to_cpu()
+
         # Initialize env
         env_cls = select_env(config["env"]["env_name"])
         # energy reward is approximately 1.725 larger than running reward
@@ -93,15 +99,7 @@ class Coadaptation:
             wandb_instance=wandb.run if self._use_wandb else None,
             use_gpu=self._use_gpu,
         )
-        if self._use_gpu:
-            utils.move_to_cuda(self._cuda_device)
-            # TODO: _policy what?
-        else:
-            utils.move_to_cpu()
-            self._policy = self._rl_algo_class.get_policy_network(
-                SoftActorCritic.create_networks(self._env, config=config)["individual"]
-            )
-
+        
         # Initialize DO algo
         do_algo_class = select_design_opt_algo(config["design_optim_method"])
         self._do_algo = do_algo_class(config=config, replay=self._replay, env=self._env)
@@ -165,7 +163,7 @@ class Coadaptation:
         self._episode_counter = 0
 
     def _prepare_single_episode(self):
-        # Set self._policy correctly
+        # Set self._policy
         network_name = "individual"
         if self._episode_counter < self._initial_episodes:
             network_name = "population"
