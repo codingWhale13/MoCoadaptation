@@ -53,7 +53,6 @@ base_config = {
     ),  # Objective preference in MORL setting (one non-negative value per objective, should add up to 1)
     # DESIGN OPTIMIZATION (DO) PARAMETERS
     "design_optim_method": "pso_batch",  # Which design optimization method to use
-    "exploration_strategy": "random",  # Type of design exploration to use - we do usually one greedy design optimization and one random selection of a design (NOTE: not currently used)
     # REINFORCEMENT LEARNING (RL) PARAMETERS
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
     "use_vector_Q": False,  # Use True to use Q-function with vector output, one value per objective
@@ -61,7 +60,6 @@ base_config = {
     "rl_algorithm_config": dict(
         algo_params=dict(  # Parameters for the RL learner for the individual networks
             discount=0.99,
-            reward_scale=1.0,
             soft_target_tau=0.005,
             target_update_period=1,
             policy_lr=3e-4,
@@ -70,7 +68,6 @@ base_config = {
         ),
         algo_params_pop=dict(  # Parameters for the RL learner for the population network
             discount=0.99,
-            reward_scale=1.0,
             soft_target_tau=0.005,
             target_update_period=1,
             policy_lr=3e-4,

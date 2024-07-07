@@ -45,8 +45,8 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_indiv_updates = config["rl_algorithm_config"]["indiv_updates"]
         self._nmbr_pop_updates = config["rl_algorithm_config"]["pop_updates"]
 
-        self._weight_pref = weight_pref  # Needed for MORL
-        self._wandb_instance = wandb_instance  # Needed for passing values to wandb from sac.py from RLkit # MORL # uncomment to track with wandb
+        self._weight_pref = weight_pref
+        self._wandb_instance = wandb_instance
 
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
@@ -109,7 +109,7 @@ class SoftActorCritic(RL_algorithm):
                 networks_pop=self._networks["population"],
                 networks_ind=self._networks["individual"],
             )
-        # We have only to do this becasue the version of rlkit which we use
+        # We have only to do this because the version of rlkit which we use
         # creates internally a target network
         # vf_dict = self._algorithm_pop.target_vf.state_dict()
         # self._algorithm_ind.target_vf.load_state_dict(vf_dict)

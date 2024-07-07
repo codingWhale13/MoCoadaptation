@@ -51,9 +51,14 @@ def parse_args():
         help="Path to parent folder of experiment run",
     )
     parser.add_argument(
+        "--save-replay-buffer",
+        type=str,
+        help="Use True to save the most recent RL replay buffer (can be a few GB large)",
+    )
+    parser.add_argument(
         "--initial-model-dir",
         type=str,
-        help="If specified, loads the latest checkpoint from this experiment folder at the beginning of training",
+        help="Use True to load the latest checkpoint from this experiment folder at the beginning of training",
     )
     parser.add_argument(
         "--weight-preference",

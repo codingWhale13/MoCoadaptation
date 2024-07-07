@@ -89,4 +89,6 @@ Different experiments are specified by their config files. These files can be fo
 - `use_cpu_for_rollout`
 - `nmbr_random_designs`
 - `iterations_random`
-- `load_model` (can be deducted from `initial_model_dir` being None or specified)
+- `load_model`: Can be deducted from `initial_model_dir` being None or specified
+- `exploration_strategy`: String declaring which design exploration strategy to use. Was an unused argument in `_training_loop`. Only the (uniform) random exploration strategy is used.
+- `rl_algorithm_config`/*/`reward_scale`: Was always set to 1, removed to avoid confusion with energy reward scaling which was introduced in MORL setting.
