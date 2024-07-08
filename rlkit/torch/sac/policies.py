@@ -74,6 +74,8 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         :param return_log_prob: If True, return a sample and its log probability
         """
         h = obs
+        assert not np.isnan(obs.cpu()).any(), "THERE ARE NANS IN THE OBS! :/"
+        
         for i, fc in enumerate(self.fcs):
             h = self.hidden_activation(fc(h))
         mean = self.last_fc(h)

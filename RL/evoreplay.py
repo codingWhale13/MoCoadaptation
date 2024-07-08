@@ -39,7 +39,15 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             print("Using EvoReplayLocalGlobalStart as replay buffer")
 
     def add_sample(
-        self, observation, action, reward, next_observation, terminal, **kwargs
+        self,
+        observation,
+        action,
+        reward,
+        next_observation,
+        terminal,
+        weight_preference_species=None,
+        weight_preference_population=None,
+        **kwargs,
     ):
         """
         Add a transition tuple.
@@ -49,6 +57,7 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             action=action,
             reward=reward,
             next_observation=next_observation,
+            weight_preference=weight_preference_species,
             terminal=terminal,
             env_info={},
             **kwargs,
@@ -59,17 +68,19 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
             action=action,
             reward=reward,
             next_observation=next_observation,
+            weight_preference=weight_preference_population,
             terminal=terminal,
             env_info={},
             **kwargs,
         )
-        
+
         if self._expect_init_state:
             self._init_state_buffer.add_sample(
                 observation=observation,
                 action=action,
                 reward=reward,
                 next_observation=next_observation,
+                weight_preference=weight_preference_species,  # TODO: should this also be pop?
                 terminal=terminal,
                 env_info={},
                 **kwargs,

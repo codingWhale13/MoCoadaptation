@@ -40,18 +40,24 @@ class EnvReplayBuffer(SimpleReplayBuffer):
                 env_info_sizes = dict()
 
         observation_dim = get_dim(self._ob_space)
-        if condition_on_preference:
-            observation_dim += env.reward_dim
 
         super().__init__(
             max_replay_buffer_size=max_replay_buffer_size,
             observation_dim=observation_dim,
             action_dim=get_dim(self._action_space),
             env_info_sizes=env_info_sizes,
+            condition_on_preference=condition_on_preference,
         )
 
     def add_sample(
-        self, observation, action, reward, terminal, next_observation, **kwargs
+        self,
+        observation,
+        action,
+        reward,
+        next_observation,
+        terminal,
+        weight_preference=None,
+        **kwargs
     ):
         if isinstance(self._action_space, Discrete):
             new_action = np.zeros(self._action_dim)
@@ -64,5 +70,6 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             reward=reward,
             next_observation=next_observation,
             terminal=terminal,
+            weight_preference=weight_preference,
             **kwargs
         )

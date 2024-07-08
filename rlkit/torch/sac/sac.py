@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from copy import deepcopy
 
 import numpy as np
 import torch
@@ -20,7 +19,6 @@ class SACTrainer(TorchTrainer):
         qf2,
         target_qf1,
         target_qf2,
-        weight_pref,
         use_vector_Q=False,
         wandb_instance=None,
         discount=0.99,
@@ -40,9 +38,8 @@ class SACTrainer(TorchTrainer):
         # weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
     ):
         super().__init__()
-        self.weight_pref = weight_pref  # MORL weights
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
-        self.use_vector_Q = use_vector_Q
+        self._use_vector_Q = use_vector_Q
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -100,6 +97,7 @@ class SACTrainer(TorchTrainer):
         obs = batch["observations"]
         actions = batch["actions"]
         next_obs = batch["next_observations"]
+        weight_pref = batch["weight_preferences"]
 
         """
         Policy and Alpha Loss
@@ -128,9 +126,9 @@ class SACTrainer(TorchTrainer):
         if self._use_gpu:
             q_new_actions = q_new_actions.to("cuda")
 
-        if self.use_vector_Q:
+        if self._use_vector_Q:
             # weight q values by preference
-            q_new_actions = torch.matmul(q_new_actions, self.weight_pref)
+            q_new_actions = torch.sum(q_new_actions * weight_pref, axis=1)
 
         policy_loss = (alpha * log_pi - q_new_actions).mean()
 
@@ -160,12 +158,12 @@ class SACTrainer(TorchTrainer):
         # q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
         if self._use_gpu:
             q_target = (
-                self.reward_scale * torch.matmul(rewards, self.weight_pref).to("cuda")
+                self.reward_scale * torch.sum(rewards * weight_pref, axis=1).to("cuda")
                 + (1.0 - terminals) * self.discount * target_q_values
             )
         else:
             q_target = (
-                self.reward_scale * torch.matmul(rewards, self.weight_pref)
+                self.reward_scale * torch.sum(rewards * weight_pref, axis=1)
                 + (1.0 - terminals) * self.discount * target_q_values
             )
         # q_target = self.reward_scale * torch.multiply(rewards, w) + (1. - terminals) * self.discount * target_q_values # torch.multiply(rewards, self.weight_pref.repeat(len(rewards), 1)) + (1. - terminals) * self.discount * target_q_values  #torch.multiply(rewards, self.weight_pref)

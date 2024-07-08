@@ -13,37 +13,35 @@ class SimpleReplayBuffer(ReplayBuffer):
         observation_dim,
         action_dim,
         env_info_sizes,
+        condition_on_preference=False,
         replace=True,
-        reward_dim=2,  # added for MORL
+        reward_dim=2,
     ):
+        self._max_replay_buffer_size = max_replay_buffer_size
         self._observation_dim = observation_dim
         self._action_dim = action_dim
-        self._max_replay_buffer_size = max_replay_buffer_size
-        self._observations = np.zeros((max_replay_buffer_size, observation_dim))
+        self._condition_on_preference = condition_on_preference
+        self._replace = replace
+        self._top = 0
+        self._size = 0
+
         # It's a bit memory inefficient to save the observations twice,
         # but it makes the code *much* easier since you no longer have to
         # worry about termination conditions.
+        self._observations = np.zeros((max_replay_buffer_size, observation_dim))
         self._next_obs = np.zeros((max_replay_buffer_size, observation_dim))
         self._actions = np.zeros((max_replay_buffer_size, action_dim))
-        # Make everything a 2D np array to make it easier for other code to
-        # reason about the shape of the data
-
-        # self._rewards = np.zeros((max_replay_buffer_size, 1)) # ORIGINAL FOR SORL
-        self._rewards = np.zeros((max_replay_buffer_size, reward_dim))  # FOR MORL
-
-        # self._terminals[i] = a terminal was received at time i
+        self._rewards = np.zeros((max_replay_buffer_size, reward_dim))
+        # self._terminals[i] represents the terminal flag received at time i
         self._terminals = np.zeros((max_replay_buffer_size, 1), dtype="uint8")
-        # Define self._env_infos[key][i] to be the return value of env_info[key]
-        # at time i
+        if self._condition_on_preference:
+            self._weight_pref = np.zeros((max_replay_buffer_size, reward_dim))
+
+        # Define self._env_infos[key][i] to be the return value of env_info[key] at time i
         self._env_infos = {}
         for key, size in env_info_sizes.items():
             self._env_infos[key] = np.zeros((max_replay_buffer_size, size))
         self._env_info_keys = env_info_sizes.keys()
-
-        self._replace = replace
-
-        self._top = 0
-        self._size = 0
 
     def add_sample(
         self,
@@ -53,13 +51,15 @@ class SimpleReplayBuffer(ReplayBuffer):
         next_observation,
         terminal,
         env_info,
-        **kwargs
+        weight_preference=None,
     ):
         self._observations[self._top] = observation
         self._actions[self._top] = action
         self._rewards[self._top] = reward
-        self._terminals[self._top] = terminal
         self._next_obs[self._top] = next_observation
+        self._terminals[self._top] = terminal
+        if self._condition_on_preference:
+            self._weight_pref[self._top] = weight_preference
 
         for key in self._env_info_keys:
             self._env_infos[key][self._top] = env_info[key]
@@ -83,6 +83,7 @@ class SimpleReplayBuffer(ReplayBuffer):
             warnings.warn(
                 "Replace was set to false, but is temporarily set to true because batch size is larger than current size of replay."
             )
+
         batch = dict(
             observations=self._observations[indices],
             actions=self._actions[indices],
@@ -90,9 +91,12 @@ class SimpleReplayBuffer(ReplayBuffer):
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
         )
+        if self._condition_on_preference:
+            batch["weight_preferences"] = self._weight_pref[indices]
         for key in self._env_info_keys:
             assert key not in batch.keys()
             batch[key] = self._env_infos[key][indices]
+
         return batch
 
     def get_contents(self):
@@ -105,6 +109,8 @@ class SimpleReplayBuffer(ReplayBuffer):
             top=self._top,
             size=self._size,
         )
+        if self._condition_on_preference:
+            batch["weight_preferences"] = self._weight_pref
         # NOTE: the remaining attributes (_observation_dim, _action_dim,
         # _max_replay_buffer_size, _env_infos, _replace) are not saved because
         # they are only set once in __init__ and we assume these values to not
@@ -120,6 +126,8 @@ class SimpleReplayBuffer(ReplayBuffer):
         self._next_obs = contents["next_observations"]
         self._top = contents["top"]
         self._size = contents["size"]
+        if self._condition_on_preference:
+            self._weight_pref = contents["weight_preferences"]
 
     def rebuild_env_info_dict(self, idx):
         return {key: self._env_infos[key][idx] for key in self._env_info_keys}

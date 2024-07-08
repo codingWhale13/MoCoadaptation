@@ -1,5 +1,6 @@
 import csv
 import os
+import random
 import time
 import utils
 
@@ -28,6 +29,20 @@ def select_rl_algo(algo_name):
         return SoftActorCritic
 
     raise ValueError(f"RL method '{algo_name}' not found")
+
+
+def get_modified_preference(original_preference):
+    preference = original_preference.copy()
+
+    preference[0] += np.random.normal(scale=0.1)
+    preference[1] += np.random.normal(scale=0.1)
+    preference = np.clip(preference, 0, 1)
+
+    sum = preference.sum()
+    if sum > 0:
+        return preference / sum
+    else:  # edge case, to avoid division by 0
+        return original_preference
 
 
 def select_design_opt_algo(algo_name):
@@ -83,7 +98,7 @@ class Coadaptation:
             self._env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
-            condition_on_preference=self._condition_on_preference,
+            condition_on_preference=config["condition_on_preference"],
             verbose=self._verbose,
         )
 
@@ -95,11 +110,10 @@ class Coadaptation:
             env=self._env,
             replay=self._replay,
             networks=self._networks,
-            weight_pref=self._weight_pref_torch,
             wandb_instance=wandb.run if self._use_wandb else None,
             use_gpu=self._use_gpu,
         )
-        
+
         # Initialize DO algo
         do_algo_class = select_design_opt_algo(config["design_optim_method"])
         self._do_algo = do_algo_class(config=config, replay=self._replay, env=self._env)
@@ -181,8 +195,6 @@ class Coadaptation:
 
         # Reset environment and return initial state
         state = self._env.reset()
-        if self._condition_on_preference:
-            state = np.concatenate((state, self._weight_pref))
 
         return state
 
@@ -200,8 +212,15 @@ class Coadaptation:
             step_count += 1
             action, _ = self._policy.get_action(state)
             new_state, reward, done, _ = self._env.step(action)
+
+            kwargs = dict()  # consider weight preferences part of sample, if specified
             if self._condition_on_preference:
-                new_state = np.concatenate((new_state, self._weight_pref))
+                weight_pref_pop = self._weight_pref
+                # with probability of 50%, modify the weight preference for the population buffer
+                if bool(random.getrandbits(1)):
+                    weight_pref_pop = get_modified_preference(self._weight_pref)
+                kwargs["weight_preference_species"] = self._weight_pref
+                kwargs["weight_preference_population"] = weight_pref_pop
 
             self._replay.add_sample(
                 observation=state,
@@ -209,7 +228,9 @@ class Coadaptation:
                 reward=reward,
                 next_observation=new_state,
                 terminal=np.array([done]),
+                **kwargs,
             )
+
             state = new_state
         self._replay.terminate_episode()
 
@@ -231,8 +252,6 @@ class Coadaptation:
             action, _ = self._policy.get_action(state, deterministic=True)
 
             new_state, reward, done, _ = self._env.step(action)
-            if self._condition_on_preference:
-                new_state = np.concatenate((new_state, self._weight_pref))
 
             ep_states = np.vstack((ep_states, state))
             ep_actions = np.vstack((ep_actions, action))

@@ -12,9 +12,7 @@ import utils
 
 # networks = {individual:, population:}
 class SoftActorCritic(RL_algorithm):
-    def __init__(
-        self, config, env, replay, networks, weight_pref, wandb_instance, use_gpu=False
-    ):
+    def __init__(self, config, env, replay, networks, wandb_instance, use_gpu=False):
         """Bascally a wrapper class for SAC from rlkit.
 
         Args:
@@ -45,7 +43,6 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_indiv_updates = config["rl_algorithm_config"]["indiv_updates"]
         self._nmbr_pop_updates = config["rl_algorithm_config"]["pop_updates"]
 
-        self._weight_pref = weight_pref
         self._wandb_instance = wandb_instance
 
         self._algorithm_ind = SoftActorCritic_rlkit(
@@ -56,7 +53,6 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._ind_qf1_target,
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
-            weight_pref=self._weight_pref,
             use_vector_Q=config["use_vector_Q"],
             wandb_instance=self._wandb_instance,
             use_gpu=use_gpu,
@@ -71,7 +67,6 @@ class SoftActorCritic(RL_algorithm):
             target_qf1=self._pop_qf1_target,
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning=False,
-            weight_pref=self._weight_pref,
             use_vector_Q=config["use_vector_Q"],
             wandb_instance=self._wandb_instance,
             use_gpu=use_gpu,
@@ -98,7 +93,6 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
             # alt_alpha = self._alt_alpha,
-            weight_pref=self._weight_pref,
             use_vector_Q=self._config["use_vector_Q"],
             wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
@@ -183,10 +177,6 @@ class SoftActorCritic(RL_algorithm):
 
         q_input_size = obs_dim + action_dim
         policy_input_size = obs_dim
-        if config["condition_on_preference"]:
-            # additionaly take weight preference as input to Q networks and policy
-            q_input_size += env.reward_dim
-            policy_input_size += env.reward_dim
         q_output_size = env.reward_dim if config["use_vector_Q"] else 1
 
         qf1 = FlattenMlp(
