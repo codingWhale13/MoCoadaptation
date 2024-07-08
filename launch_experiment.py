@@ -97,6 +97,7 @@ def load_config(args):
     for arg_name in [
         "run_name",
         "data_folder",
+        "save_replay_buffer",
         "initial_model_dir",
         "weight_preference",
         "random_seed",
