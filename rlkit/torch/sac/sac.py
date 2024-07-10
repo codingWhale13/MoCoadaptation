@@ -20,6 +20,7 @@ class SACTrainer(TorchTrainer):
         target_qf1,
         target_qf2,
         use_vector_Q=False,
+        condition_on_preference=False,
         wandb_instance=None,
         discount=0.99,
         reward_scale=1.0,
@@ -40,6 +41,7 @@ class SACTrainer(TorchTrainer):
         super().__init__()
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
         self._use_vector_Q = use_vector_Q
+        self._condition_on_preference = condition_on_preference
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -69,20 +71,10 @@ class SACTrainer(TorchTrainer):
         self.render_eval_paths = render_eval_paths
 
         self.qf_criterion = nn.MSELoss()
-        self.vf_criterion = nn.MSELoss()
 
-        self.policy_optimizer = optimizer_class(
-            self.policy.parameters(),
-            lr=policy_lr,
-        )
-        self.qf1_optimizer = optimizer_class(
-            self.qf1.parameters(),
-            lr=qf_lr,
-        )
-        self.qf2_optimizer = optimizer_class(
-            self.qf2.parameters(),
-            lr=qf_lr,
-        )
+        self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
+        self.qf1_optimizer = optimizer_class(self.qf1.parameters(), lr=qf_lr)
+        self.qf2_optimizer = optimizer_class(self.qf2.parameters(), lr=qf_lr)
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -103,7 +95,8 @@ class SACTrainer(TorchTrainer):
         Policy and Alpha Loss
         """
         new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs,
+            obs=obs,
+            pref=weight_pref if self._condition_on_preference else None,
             reparameterize=True,
             return_log_prob=True,
         )
@@ -119,16 +112,18 @@ class SACTrainer(TorchTrainer):
             alpha_loss = 0
             alpha = self._alpha
 
+        pref_arg = [weight_pref] if self._condition_on_preference else []
+
         q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions),
-            self.qf2(obs, new_obs_actions),
+            self.qf1(obs, new_obs_actions, *pref_arg),
+            self.qf2(obs, new_obs_actions, *pref_arg),
         )
         if self._use_gpu:
             q_new_actions = q_new_actions.to("cuda")
 
         if self._use_vector_Q:
             # weight q values by preference
-            q_new_actions = torch.sum(q_new_actions * weight_pref, axis=1)
+            q_new_actions = torch.sum(q_new_actions * weight_pref, axis=1, keepdim=True)
 
         policy_loss = (alpha * log_pi - q_new_actions).mean()
 
@@ -136,38 +131,36 @@ class SACTrainer(TorchTrainer):
         QF Loss
         """
 
-        q1_pred = self.qf1(obs, actions)
-        q2_pred = self.qf2(obs, actions)
+        q1_pred = self.qf1(obs, actions, *pref_arg)
+        q2_pred = self.qf2(obs, actions, *pref_arg)
 
         # Make sure policy accounts for squashing functions like tanh correctly!
         new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs,
+            obs=next_obs,
+            pref=weight_pref if self._condition_on_preference else None,
             reparameterize=True,
             return_log_prob=True,
         )
         target_q_values = (
             torch.min(
-                self.target_qf1(next_obs, new_next_actions),
-                self.target_qf2(next_obs, new_next_actions),
+                self.target_qf1(next_obs, new_next_actions, *pref_arg),
+                self.target_qf2(next_obs, new_next_actions, *pref_arg),
             )
             - alpha * new_log_pi
         )
 
-        # w = self.weight_pref.repeat(int(len(rewards)/2), 1).to("cuda")
-        # SORL #q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
-        # q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
+        """
+        BEFORE: rewards (batch_size, 2) @ weight_pref (2, 1) => (batch_size, 1)
+        NOW:    torch.sum(rewards (batch_size, 2) * weight_pref (batch_size, 2), axis=1) => (batch_size, 1)
+        """
+        weighted_reward = torch.sum(rewards * weight_pref, axis=1, keepdim=True)
         if self._use_gpu:
-            q_target = (
-                self.reward_scale * torch.sum(rewards * weight_pref, axis=1).to("cuda")
-                + (1.0 - terminals) * self.discount * target_q_values
-            )
-        else:
-            q_target = (
-                self.reward_scale * torch.sum(rewards * weight_pref, axis=1)
-                + (1.0 - terminals) * self.discount * target_q_values
-            )
-        # q_target = self.reward_scale * torch.multiply(rewards, w) + (1. - terminals) * self.discount * target_q_values # torch.multiply(rewards, self.weight_pref.repeat(len(rewards), 1)) + (1. - terminals) * self.discount * target_q_values  #torch.multiply(rewards, self.weight_pref)
-        # q_target = np.dot(q_target, self.weight_pref) # MORL weights # ERROR  # ADDED
+            weighted_reward = weighted_reward.to("cuda")
+
+        q_target = (
+            self.reward_scale * weighted_reward
+            + (1.0 - terminals) * self.discount * target_q_values
+        )
 
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())

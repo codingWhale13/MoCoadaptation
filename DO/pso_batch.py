@@ -9,25 +9,17 @@ from .design_optimization import DesignOptimization
 
 class PSOBatch(DesignOptimization):
     def __init__(self, config, replay, env):
-        self._config = config
-        self._replay = replay
         self._env = env
+        self._replay = replay
+        self._state_batch_size = config["state_batch_size"]
+        self._condition_on_preference = config["condition_on_preference"]
 
-        if "state_batch_size" in self._config.keys():
-            self._state_batch_size = self._config["state_batch_size"]
-        else:
-            self._state_batch_size = 32
-
-    def optimize_design(self, design, q_network, policy_network, weights, verbose=False):
+    def optimize_design(self, design, q_network, policy_network, verbose=False):
         self._replay.set_mode("start")
-        initial_state = self._replay.random_batch(self._state_batch_size)
-        initial_state = initial_state["observations"]
-        design_idxs = self._env.get_design_dimensions()
-        # initial_state = initial_state[:,:-len(design)]
-        # state_tensor = torch.from_numpy(initial_state).to(device=ptu.device, dtype=torch.float32)
+        initial_batch = self._replay.random_batch(self._state_batch_size)
+        prefs = ptu.from_numpy(initial_batch["weight_preferences"])
 
-        # initial_design = np.array(self._current_design)
-        # initial_design = np.array(design)
+        design_idxs = self._env.get_design_dimensions()
 
         def f_qval(x_input, **kwargs):
             shape = x_input.shape
@@ -35,32 +27,19 @@ class PSOBatch(DesignOptimization):
             with torch.no_grad():
                 for i in range(shape[0]):
                     x = x_input[i : i + 1, :]
-                    # X = (
-                    #     torch.from_numpy(x)
-                    #     .to(device=ptu.device, dtype=torch.float32)
-                    #     .contiguous()
-                    #     .requires_grad_(False)
-                    # )
-                    # X_expand = X.expand(self._state_batch_size, -1)
-                    # network_input = torch.cat((state_tensor,X_expand), -1)
-                    state_batch = initial_state.copy()
+
+                    state_batch = initial_batch["observations"].copy()
                     state_batch[:, design_idxs] = x
-                    network_input = torch.from_numpy(state_batch).to(
-                        device=ptu.device, dtype=torch.float32
+                    state_torch = ptu.from_numpy(state_batch)
+
+                    pref_arg = [prefs] if self._condition_on_preference else []
+                    (action, _, _, _, _, _, _, _) = policy_network(
+                        state_torch, *pref_arg, deterministic=True
                     )
-                    (
-                        action,
-                        _,
-                        _,
-                        _,
-                        _,
-                        _,
-                        _,
-                        _,
-                    ) = policy_network(network_input, deterministic=True)
-                    output = q_network(network_input, action)
-                    if output.shape[1] != 1:
-                        loss = -torch.matmul(output, weights).mean()
+                    output = q_network(state_torch, action, *pref_arg)
+
+                    if output.shape[1] != 1:  # TODO: make option more explicit
+                        loss = -torch.sum(output * prefs, axis=1).mean()
                     else:
                         loss = -output.mean()
                     fval = float(loss.item())

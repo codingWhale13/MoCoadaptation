@@ -1,5 +1,6 @@
 import csv
 import os
+from pathlib import Path
 import random
 import time
 import utils
@@ -73,16 +74,21 @@ class Coadaptation:
         self._use_gpu = config["use_gpu"]
         self._cuda_device = config["cuda_device"]
 
-        self._weight_pref = config["weight_preference"]
-        self._weight_pref_torch = torch.tensor(self._weight_pref).reshape(2, 1)
-        if self._use_gpu:
-            self._weight_pref_torch = self._weight_pref_torch.to("cuda")
+        self._weight_pref = np.array(config["weight_preference"])
 
         # Start wandb experiment
         if self._use_wandb:
-            wandb.init(project=config["project_name"], name=config["run_name"])
+            wandb.init(
+                project=config["project_name"],
+                name=config["run_name"],
+                dir=Path(__file__).parent,
+                # Avoid large debug-internal.log files (see https://github.com/wandb/wandb/issues/4223)
+                settings=wandb.Settings(
+                    log_internal=str(Path(__file__).parent / "wandb" / "null"),
+                ),
+            )
 
-        # Set device to GPU or CPU^
+        # Set device to GPU or CPU
         if self._use_gpu:
             utils.move_to_cuda(self._cuda_device)
         else:
@@ -98,7 +104,6 @@ class Coadaptation:
             self._env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
-            condition_on_preference=config["condition_on_preference"],
             verbose=self._verbose,
         )
 
@@ -181,14 +186,14 @@ class Coadaptation:
         network_name = "individual"
         if self._episode_counter < self._initial_episodes:
             network_name = "population"
-        policy = self._rl_algo_class.get_policy_network(self._networks[network_name])
+        self._policy = self._rl_algo_class.get_policy_network(
+            self._networks[network_name]
+        )
 
-        if self._use_gpu:
-            self._policy = policy
-        else:
+        if not self._use_gpu:
             self._policy = utils.copy_network(
                 network_to=self._policy,
-                network_from=policy,
+                network_from=self._policy,
                 cuda_device=self._cuda_device,
                 force_cpu=True,
             )
@@ -210,17 +215,15 @@ class Coadaptation:
         done = False
         while not done and step_count < self._episode_length:
             step_count += 1
-            action, _ = self._policy.get_action(state)
+            pref = self._weight_pref if self._condition_on_preference else None
+            action, _ = self._policy.get_action(state, pref)
             new_state, reward, done, _ = self._env.step(action)
 
-            kwargs = dict()  # consider weight preferences part of sample, if specified
-            if self._condition_on_preference:
-                weight_pref_pop = self._weight_pref
+            if bool(random.getrandbits(1)):
                 # with probability of 50%, modify the weight preference for the population buffer
-                if bool(random.getrandbits(1)):
-                    weight_pref_pop = get_modified_preference(self._weight_pref)
-                kwargs["weight_preference_species"] = self._weight_pref
-                kwargs["weight_preference_population"] = weight_pref_pop
+                weight_pref_pop = get_modified_preference(self._weight_pref)
+            else:
+                weight_pref_pop = self._weight_pref
 
             self._replay.add_sample(
                 observation=state,
@@ -228,7 +231,8 @@ class Coadaptation:
                 reward=reward,
                 next_observation=new_state,
                 terminal=np.array([done]),
-                **kwargs,
+                weight_preference_species=self._weight_pref,
+                weight_preference_population=weight_pref_pop,
             )
 
             state = new_state
@@ -249,7 +253,9 @@ class Coadaptation:
         done = False
         while not done and step_count < self._episode_length:
             step_count += 1
-            action, _ = self._policy.get_action(state, deterministic=True)
+
+            pref = self._weight_pref if self._condition_on_preference else None
+            action, _ = self._policy.get_action(state, pref, deterministic=True)
 
             new_state, reward, done, _ = self._env.step(action)
 
@@ -265,7 +271,7 @@ class Coadaptation:
 
         if self._use_wandb:
             r1, r2 = ep_rewards
-            wandb.log({"Reward Speed": r1, "Reward Energy": r2})  # save episodic reward
+            # wandb.log({"Reward Speed": r1, "Reward Energy": r2})  # save episodic reward
 
     def _save_do_checkpoint(self):
         """Saves the logged data to the disk as csv files.
@@ -291,10 +297,6 @@ class Coadaptation:
             cwriter.writerow(current_design)
             cwriter.writerow([reward[0] for reward in self._rewards])
             cwriter.writerow([reward[1] for reward in self._rewards])
-
-        if self._use_wandb:
-            # save rewards and current design
-            wandb.log({"Rewards": self._rewards, "Current design": current_design})
 
     def _save_rl_checkpoint(self):
         """Saves the networks and replay buffer to disk if specified in config."""
@@ -410,7 +412,6 @@ class Coadaptation:
             design=optimized_params,
             q_network=q_network,
             policy_network=policy_network,
-            weights=self._weight_pref_torch,
             verbose=self._verbose,
         )
 
@@ -436,7 +437,6 @@ class Coadaptation:
                     design=optimized_params,
                     q_network=q_network,
                     policy_network=policy_network,
-                    weights=self._weight_pref_torch,
                     verbose=self._verbose,
                 )
                 optimized_params = list(optimized_params)

@@ -1,3 +1,6 @@
+# TODO: If this file is needed, double-check that it works
+# (changed loading the weights from replay buffer instead of argument in optimize_design)
+
 import numpy as np
 import pyswarms as ps
 
@@ -6,17 +9,14 @@ from .design_optimization import DesignOptimization
 
 class PSOSimulation(DesignOptimization):
     def __init__(self, config, replay, env):
-        self._config = config
-        self._replay = replay
         self._env = env
+        self._replay = replay
+        self._state_batch_size = config["state_batch_size"]
+        self._episode_length = config["steps_per_episodes"]
+        self._condition_on_preference = config["condition_on_preference"]
 
-        self._episode_length = self._config["steps_per_episodes"]
-
-    def optimize_design(
-        self, design, q_network, policy_network, weights, verbose=False
-    ):
-        # Important: We reset the design of the environment. Previous design
-        #   will be lost
+    def optimize_design(self, design, q_network, policy_network, verbose=False):
+        # NOTE: Design of the environment is reset. Previous design will be lost.
 
         # temporarily disable video recording to avoid creation of many useless folders
         video_recording_was_enabled = self._env._record_video
@@ -25,11 +25,11 @@ class PSOSimulation(DesignOptimization):
         def get_reward_for_design(design):
             self._env.set_new_design(design)
             state = self._env.reset()
-            reward_episode = []  # SORL # MORL
-            # reward_episode = np.empty([])
-            weights_np = (
-                weights.cpu().numpy()
-            )  # Convert from tensor to numpy array #MORL
+            reward_episode = []
+
+            initial_batch = self._replay.random_batch(self._state_batch_size)
+            weights_np = initial_batch["weight_preferences"].cpu().numpy()
+
             done = False
             nmbr_of_steps = 0
             while not (done) and nmbr_of_steps <= self._episode_length:
@@ -38,20 +38,13 @@ class PSOSimulation(DesignOptimization):
                 new_state, reward, done, _ = self._env.step(action)
                 reward = reward.reshape(1, 2)
                 # reward_episode.append(float(reward)) # SORL original
-                reward = np.matmul(
-                    reward, weights_np
-                )  # .reshape(1,) # Scalarization of reward per iteration
+                reward = np.sum(reward, weights_np, axis=1)  # scalarize reward
                 reward_episode.append(reward)  # Changed for MORL - list
-                # np.column_stack((reward_episode, reward))# MORL - as numpy array
                 state = new_state
 
-            # print(reward_episode.shape)
-            # print(reward_episode)
-
             # reward_mean = np.matmul(reward_episode, weights.numpy) # scalarisation # I assume that the reward_episode is NDarray since .step(action) from evoenvsMO.py is returning NDarray as reward
-            reward_mean = np.mean(reward_episode)  # SORL
-            # print(reward_mean)
-            # reward_mean = np.mean(reward_mean) # SORL Need to be changed still?
+            reward_mean = np.mean(reward_episode)
+
             return reward_mean
 
         def f_qval(x_input, **kwargs):

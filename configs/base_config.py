@@ -46,13 +46,13 @@ base_config = {
     "iterations": 100,  # Number of training episodes to run for each design, *after* the initial iterations
     "initial_episodes": 3,  # Number of initial episodes per design before training of the individual networks (useful for filling replay buffer when steps_per_episodes is low)
     "steps_per_episodes": 1000,  # Number of steps per episode
-    "state_batch_size": 32,  # Size of the batch used during the design optimization process to estimate fitness of design
     "weight_preference": (
         0.5,
         0.5,
     ),  # Objective preference in MORL setting (one non-negative value per objective, should add up to 1)
     # DESIGN OPTIMIZATION (DO) PARAMETERS
     "design_optim_method": "pso_batch",  # Which design optimization method to use
+    "state_batch_size": 32,  # Size of the batch used during the design optimization process to estimate fitness of design
     # REINFORCEMENT LEARNING (RL) PARAMETERS
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
     "use_vector_Q": False,  # Use True to use Q-function with vector output, one value per objective

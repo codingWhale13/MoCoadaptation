@@ -44,6 +44,7 @@ class SoftActorCritic(RL_algorithm):
         self._nmbr_pop_updates = config["rl_algorithm_config"]["pop_updates"]
 
         self._wandb_instance = wandb_instance
+        self._use_gpu = use_gpu
 
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
@@ -54,8 +55,9 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             use_automatic_entropy_tuning=False,
             use_vector_Q=config["use_vector_Q"],
+            condition_on_preference=config["condition_on_preference"],
             wandb_instance=self._wandb_instance,
-            use_gpu=use_gpu,
+            use_gpu=self._use_gpu,
             **self._variant_spec,
         )
 
@@ -68,15 +70,11 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._pop_qf2_target,
             use_automatic_entropy_tuning=False,
             use_vector_Q=config["use_vector_Q"],
+            condition_on_preference=config["condition_on_preference"],
             wandb_instance=self._wandb_instance,
-            use_gpu=use_gpu,
+            use_gpu=self._use_gpu,
             **self._variant_pop,
         )
-
-        self._use_gpu = use_gpu
-
-        # self._algorithm_ind.to(ptu.device)
-        # self._algorithm_pop.to(ptu.device)
 
     def episode_init(self):
         """Initializations to be done before the first episode.
@@ -94,6 +92,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             # alt_alpha = self._alt_alpha,
             use_vector_Q=self._config["use_vector_Q"],
+            condition_on_preference=self._config["condition_on_preference"],
             wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
             **self._variant_spec,
@@ -177,6 +176,9 @@ class SoftActorCritic(RL_algorithm):
 
         q_input_size = obs_dim + action_dim
         policy_input_size = obs_dim
+        if config["condition_on_preference"]:
+            q_input_size += env.reward_dim
+            policy_input_size += env.reward_dim
         q_output_size = env.reward_dim if config["use_vector_Q"] else 1
 
         qf1 = FlattenMlp(
@@ -201,8 +203,8 @@ class SoftActorCritic(RL_algorithm):
         ).to(device=ptu.device)
         policy = TanhGaussianPolicy(
             hidden_sizes=hidden_sizes,
-            obs_dim=policy_input_size,
-            action_dim=action_dim,
+            input_size=policy_input_size,
+            output_size=action_dim,
         ).to(device=ptu.device)
 
         clip_value = 1.0

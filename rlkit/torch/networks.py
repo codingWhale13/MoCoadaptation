@@ -8,7 +8,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from rlkit.torch import pytorch_util as ptu
+import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.modules import LayerNorm
 
 

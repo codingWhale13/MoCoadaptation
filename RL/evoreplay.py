@@ -10,30 +10,22 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
         env,
         max_replay_buffer_size_species,
         max_replay_buffer_size_population,
-        condition_on_preference=False,
         verbose=False,
     ):
         self._species_buffer = EnvReplayBuffer(
-            env=env,
-            max_replay_buffer_size=max_replay_buffer_size_species,
-            condition_on_preference=condition_on_preference,
+            env=env, max_replay_buffer_size=max_replay_buffer_size_species
         )
         self._population_buffer = EnvReplayBuffer(
-            env=env,
-            max_replay_buffer_size=max_replay_buffer_size_population,
-            condition_on_preference=condition_on_preference,
+            env=env, max_replay_buffer_size=max_replay_buffer_size_population
         )
         self._init_state_buffer = EnvReplayBuffer(
-            env=env,
-            max_replay_buffer_size=max_replay_buffer_size_population,
-            condition_on_preference=condition_on_preference,
+            env=env, max_replay_buffer_size=max_replay_buffer_size_population
         )
         self._env = env
         self._max_replay_buffer_size_species = max_replay_buffer_size_species
         self._mode = "species"
         self._ep_counter = 0
         self._expect_init_state = True
-        self._condition_on_preference = condition_on_preference
 
         if verbose:
             print("Using EvoReplayLocalGlobalStart as replay buffer")
@@ -45,8 +37,8 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
         reward,
         next_observation,
         terminal,
-        weight_preference_species=None,
-        weight_preference_population=None,
+        weight_preference_species,
+        weight_preference_population,
         **kwargs,
     ):
         """
@@ -137,9 +129,7 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
 
     def reset_species_buffer(self):
         self._species_buffer = EnvReplayBuffer(
-            env=self._env,
-            max_replay_buffer_size=self._max_replay_buffer_size_species,
-            condition_on_preference=self._condition_on_preference,
+            env=self._env, max_replay_buffer_size=self._max_replay_buffer_size_species
         )
         self._ep_counter = 0
 

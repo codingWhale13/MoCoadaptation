@@ -32,38 +32,42 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
     """
 
     def __init__(
-        self, hidden_sizes, obs_dim, action_dim, std=None, init_w=1e-3, **kwargs
+        self, hidden_sizes, input_size, output_size, std=None, init_w=1e-3, **kwargs
     ):
         super().__init__(
             hidden_sizes,
-            input_size=obs_dim,
-            output_size=action_dim,
+            input_size=input_size,
+            output_size=output_size,
             init_w=init_w,
             **kwargs
         )
         self.log_std = None
         self.std = std
         if std is None:
-            last_hidden_size = obs_dim
+            last_hidden_size = input_size
             if len(hidden_sizes) > 0:
                 last_hidden_size = hidden_sizes[-1]
-            self.last_fc_log_std = nn.Linear(last_hidden_size, action_dim)
+            self.last_fc_log_std = nn.Linear(last_hidden_size, output_size)
             self.last_fc_log_std.weight.data.uniform_(-init_w, init_w)
             self.last_fc_log_std.bias.data.uniform_(-init_w, init_w)
         else:
             self.log_std = np.log(std)
             assert LOG_SIG_MIN <= self.log_std <= LOG_SIG_MAX
 
-    def get_action(self, obs_np, deterministic=False):
-        actions = self.get_actions(obs_np[None], deterministic=deterministic)
+    def get_action(self, obs_np, pref_np=None, deterministic=False):
+        # add an extra dimension using `np_array[None]` syntax to get shapes (1, something)
+        pref = pref_np[None] if pref_np is not None else None
+        actions = self.get_actions(obs_np[None], pref, deterministic=deterministic)
+
         return actions[0, :], {}
 
-    def get_actions(self, obs_np, deterministic=False):
-        return eval_np(self, obs_np, deterministic=deterministic)[0]
+    def get_actions(self, obs, pref=None, deterministic=False):
+        return eval_np(self, obs, pref, deterministic=deterministic)[0]
 
     def forward(
         self,
         obs,
+        pref=None,
         reparameterize=True,
         deterministic=False,
         return_log_prob=False,
@@ -73,9 +77,8 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         :param deterministic: If True, do not sample
         :param return_log_prob: If True, return a sample and its log probability
         """
-        h = obs
-        assert not np.isnan(obs.cpu()).any(), "THERE ARE NANS IN THE OBS! :/"
-        
+
+        h = obs if pref is None else torch.cat((obs, pref), dim=1)
         for i, fc in enumerate(self.fcs):
             h = self.hidden_activation(fc(h))
         mean = self.last_fc(h)
@@ -129,5 +132,5 @@ class MakeDeterministic(nn.Module, Policy):
         super().__init__()
         self.stochastic_policy = stochastic_policy
 
-    def get_action(self, observation):
-        return self.stochastic_policy.get_action(observation, deterministic=True)
+    def get_action(self, observation, pref=None):
+        return self.stochastic_policy.get_action(observation, pref, deterministic=True)
