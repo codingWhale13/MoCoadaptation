@@ -72,7 +72,7 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
                 action=action,
                 reward=reward,
                 next_observation=next_observation,
-                weight_preference=weight_preference_species,  # TODO: should this also be pop?
+                weight_preference=weight_preference_species,
                 terminal=terminal,
                 env_info={},
                 **kwargs,

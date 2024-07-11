@@ -122,8 +122,6 @@ class SoftActorCritic(RL_algorithm):
         if train_ind:
             # Get only samples from the species buffer
             self._replay.set_mode("species")
-            # self._algorithm_ind.num_updates_per_train_call = self._variant_spec['num_updates_per_epoch']
-            # self._algorithm_ind._try_to_train()
             for _ in range(self._nmbr_indiv_updates):
                 batch = self._replay.random_batch(self._batch_size)
                 self._algorithm_ind.train(batch)
@@ -131,8 +129,6 @@ class SoftActorCritic(RL_algorithm):
         if train_pop:
             # Get only samples from the population buffer
             self._replay.set_mode("population")
-            # self._algorithm_pop.num_updates_per_train_call = self._variant_pop['num_updates_per_epoch']
-            # self._algorithm_pop._try_to_train()
             for _ in range(self._nmbr_pop_updates):
                 batch = self._replay.random_batch(self._batch_size)
                 self._algorithm_pop.train(batch)

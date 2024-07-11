@@ -19,7 +19,7 @@ class SACTrainer(TorchTrainer):
         qf2,
         target_qf1,
         target_qf2,
-        condition_on_preference=False,
+        condition_on_preference=True,
         scalarize_before_q_loss=False,
         use_vector_q=False,
         discount=0.99,
@@ -86,11 +86,11 @@ class SACTrainer(TorchTrainer):
         self._use_gpu = use_gpu
 
     def train_from_torch(self, batch):
-        rewards = batch["rewards"]
-        terminals = batch["terminals"]
         obs = batch["observations"]
         actions = batch["actions"]
+        rewards = batch["rewards"]
         next_obs = batch["next_observations"]
+        terminals = batch["terminals"]
         weight_pref = batch["weight_preferences"]
 
         """
@@ -168,6 +168,7 @@ class SACTrainer(TorchTrainer):
         ).detach()
 
         if self._scalarize_before_q_loss:
+            # if use_vector_q=False, the Q values are already scalars and this is redundant
             q1_pred = torch.sum(q1_pred * weight_pref, dim=1)
             q2_pred = torch.sum(q2_pred * weight_pref, dim=1)
             q_target = torch.sum(q_target * weight_pref, dim=1)
