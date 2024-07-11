@@ -55,8 +55,9 @@ base_config = {
     "state_batch_size": 32,  # Size of the batch used during the design optimization process to estimate fitness of design
     # REINFORCEMENT LEARNING (RL) PARAMETERS
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
-    "use_vector_Q": False,  # Use True to use Q-function with vector output, one value per objective
     "condition_on_preference": True,  # Use True to condition the policy and Q networks on the weight preference
+    "scalarize_before_q_loss": False,  # Use True to scalarize Q-target and Q-prediction before loss calculation, use False to feed original values (vectors if use_vector_Q, else scalars) to loss function
+    "use_vector_Q": False,  # Use True to use Q-function with vector output (one value per objective) and False to target scalarized reward
     "rl_algorithm_config": dict(
         algo_params=dict(  # Parameters for the RL learner for the individual networks
             discount=0.99,

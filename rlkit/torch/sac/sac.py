@@ -19,9 +19,9 @@ class SACTrainer(TorchTrainer):
         qf2,
         target_qf1,
         target_qf2,
-        use_vector_Q=False,
         condition_on_preference=False,
-        wandb_instance=None,
+        scalarize_before_q_loss=False,
+        use_vector_Q=False,
         discount=0.99,
         reward_scale=1.0,
         policy_lr=1e-3,
@@ -35,13 +35,15 @@ class SACTrainer(TorchTrainer):
         target_entropy=None,
         alpha=1.0,
         use_gpu=False,
+        wandb_instance=None,
         # weight_pref = torch.tensor([0.5, 0.5]).reshape(2, 1).to("cuda")# np.array([0.5, 0.5]) # MORL weights # update
         # weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
     ):
         super().__init__()
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
-        self._use_vector_Q = use_vector_Q
         self._condition_on_preference = condition_on_preference
+        self._use_vector_Q = use_vector_Q
+        self._scalarize_before_q_loss = scalarize_before_q_loss
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -122,8 +124,8 @@ class SACTrainer(TorchTrainer):
             q_new_actions = q_new_actions.to("cuda")
 
         if self._use_vector_Q:
-            # weight q values by preference
-            q_new_actions = torch.sum(q_new_actions * weight_pref, axis=1, keepdim=True)
+            # scalarize Q-value vector by weighting them with the preferences
+            q_new_actions = torch.sum(q_new_actions * weight_pref, dim=1, keepdim=True)
 
         policy_loss = (alpha * log_pi - q_new_actions).mean()
 
@@ -141,29 +143,37 @@ class SACTrainer(TorchTrainer):
             reparameterize=True,
             return_log_prob=True,
         )
+
         target_q_values = (
             torch.min(
                 self.target_qf1(next_obs, new_next_actions, *pref_arg),
                 self.target_qf2(next_obs, new_next_actions, *pref_arg),
             )
-            - alpha * new_log_pi
+            - alpha * new_log_pi  # broadcasted in case of use_vector_Q=True
         )
 
-        """
-        BEFORE: rewards (batch_size, 2) @ weight_pref (2, 1) => (batch_size, 1)
-        NOW:    torch.sum(rewards (batch_size, 2) * weight_pref (batch_size, 2), axis=1) => (batch_size, 1)
-        """
-        weighted_reward = torch.sum(rewards * weight_pref, axis=1, keepdim=True)
+        # Match reward dimension and target dimension:
+        # If Q-network has vector output, it can handle the vector reward
+        # If Q-network has scalar output, scalarize the reward using the preference
+        if not self._use_vector_Q:
+            # BEFORE: rewards (bs, 2) @ weight_pref (2, 1) => (bs, 1) # "bs"="batch size"
+            # NOW:    torch.sum(rewards (bs, 2) * weight_pref (bs, 2), dim=1) => (bs, 1)
+            rewards = torch.sum(rewards * weight_pref, dim=1, keepdim=True)
         if self._use_gpu:
-            weighted_reward = weighted_reward.to("cuda")
+            rewards = rewards.to("cuda")
 
         q_target = (
-            self.reward_scale * weighted_reward
-            + (1.0 - terminals) * self.discount * target_q_values
-        )
+            self.reward_scale * rewards  # past rewards
+            + (1.0 - terminals) * self.discount * target_q_values  # expected return
+        ).detach()
 
-        qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
-        qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
+        if self._scalarize_before_q_loss:
+            q1_pred = torch.sum(q1_pred * weight_pref, dim=1)
+            q2_pred = torch.sum(q2_pred * weight_pref, dim=1)
+            q_target = torch.sum(q_target * weight_pref, dim=1)
+
+        qf1_loss = self.qf_criterion(q1_pred, q_target)
+        qf2_loss = self.qf_criterion(q2_pred, q_target)
 
         """
         Update networks

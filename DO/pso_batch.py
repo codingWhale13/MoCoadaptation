@@ -39,7 +39,7 @@ class PSOBatch(DesignOptimization):
                     output = q_network(state_torch, action, *pref_arg)
 
                     if output.shape[1] != 1:  # TODO: make option more explicit
-                        loss = -torch.sum(output * prefs, axis=1).mean()
+                        loss = -torch.sum(output * prefs, dim=1).mean()
                     else:
                         loss = -output.mean()
                     fval = float(loss.item())

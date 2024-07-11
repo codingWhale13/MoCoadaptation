@@ -38,7 +38,7 @@ class PSOSimulation(DesignOptimization):
                 new_state, reward, done, _ = self._env.step(action)
                 reward = reward.reshape(1, 2)
                 # reward_episode.append(float(reward)) # SORL original
-                reward = np.sum(reward, weights_np, axis=1)  # scalarize reward
+                reward = np.sum(reward, weights_np, dim=1)  # scalarize reward
                 reward_episode.append(reward)  # Changed for MORL - list
                 state = new_state
 
