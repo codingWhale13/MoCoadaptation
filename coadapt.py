@@ -328,7 +328,7 @@ class Coadaptation:
             file_name = f"latest_replay_buffer_0.chk"  # "_0" is for convenient loading
             torch.save(replay_buffer_checkpoint, os.path.join(save_dir, file_name))
 
-    def _single_rl_iteration(self):
+    def _single_rl_iteration(self, train_pop=True):
         """A single iteration.
 
         Makes all necessary function calls for a single iterations such as:
@@ -345,19 +345,17 @@ class Coadaptation:
         self._replay.set_mode("species")
         self._collect_training_experience()
 
-        # TODO Change here to train global only after five designs
-        train_pop = self._design_counter > 3
         if self._episode_counter >= self._initial_episodes:
             self._rl_algo.single_train_step(train_ind=True, train_pop=train_pop)
 
         self._episode_counter += 1
         self.execute_policy()
 
-    def _train_rl_policy(self, iterations):
+    def _train_rl_policy(self, iterations, train_pop=True):
         """Run this method after a new design has been chosen."""
         # Optimize RL policy for new design
         for _ in range(iterations):
-            self._single_rl_iteration()
+            self._single_rl_iteration(train_pop)
 
         self._save_do_checkpoint()  # save DO checkpoint (and rewards) in CSV
         self._save_rl_checkpoint()  # save RL checkpoint (network weights)
@@ -379,10 +377,10 @@ class Coadaptation:
                 self._design_counter += 1
                 self._env.set_new_design(params)
                 self.initialize_episode()
-                self._train_rl_policy(iterations)
+                self._train_rl_policy(iterations, train_pop=False)
         else:
             self._design_counter += 1
-            self._train_rl_policy(iterations)
+            self._train_rl_policy(iterations, train_pop=False)
 
     def _training_loop(self, iterations, design_cycles):
         """The training process which optimizes designs and policies.
@@ -422,7 +420,7 @@ class Coadaptation:
             self._env.set_new_design(optimized_params)
 
             # Reinforcement Learning
-            self._train_rl_policy(iterations)
+            self._train_rl_policy(iterations, train_pop=True)
 
             # Design Optimization
             if i % 2 == 1:
