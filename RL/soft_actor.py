@@ -55,7 +55,7 @@ class SoftActorCritic(RL_algorithm):
             target_qf2=self._ind_qf2_target,
             condition_on_preference=config["condition_on_preference"],
             scalarize_before_q_loss=config["scalarize_before_q_loss"],
-            use_vector_Q=config["use_vector_Q"],
+            use_vector_q=config["use_vector_q"],
             use_automatic_entropy_tuning=False,
             use_gpu=self._use_gpu,
             wandb_instance=self._wandb_instance,
@@ -72,7 +72,7 @@ class SoftActorCritic(RL_algorithm):
             use_automatic_entropy_tuning=False,
             condition_on_preference=config["condition_on_preference"],
             scalarize_before_q_loss=config["scalarize_before_q_loss"],
-            use_vector_Q=config["use_vector_Q"],
+            use_vector_q=config["use_vector_q"],
             wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
             **self._variant_pop,
@@ -95,7 +95,7 @@ class SoftActorCritic(RL_algorithm):
             # alt_alpha = self._alt_alpha,
             condition_on_preference=self._config["condition_on_preference"],
             scalarize_before_q_loss=self._config["scalarize_before_q_loss"],
-            use_vector_Q=self._config["use_vector_Q"],
+            use_vector_q=self._config["use_vector_q"],
             wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
             **self._variant_spec,
@@ -182,7 +182,7 @@ class SoftActorCritic(RL_algorithm):
         if config["condition_on_preference"]:
             q_input_size += env.reward_dim
             policy_input_size += env.reward_dim
-        q_output_size = env.reward_dim if config["use_vector_Q"] else 1
+        q_output_size = env.reward_dim if config["use_vector_q"] else 1
 
         qf1 = FlattenMlp(
             hidden_sizes=hidden_sizes,

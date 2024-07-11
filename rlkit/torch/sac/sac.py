@@ -21,7 +21,7 @@ class SACTrainer(TorchTrainer):
         target_qf2,
         condition_on_preference=False,
         scalarize_before_q_loss=False,
-        use_vector_Q=False,
+        use_vector_q=False,
         discount=0.99,
         reward_scale=1.0,
         policy_lr=1e-3,
@@ -42,7 +42,7 @@ class SACTrainer(TorchTrainer):
         super().__init__()
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
         self._condition_on_preference = condition_on_preference
-        self._use_vector_Q = use_vector_Q
+        self._use_vector_q = use_vector_q
         self._scalarize_before_q_loss = scalarize_before_q_loss
         self.env = env
         self.policy = policy
@@ -123,7 +123,7 @@ class SACTrainer(TorchTrainer):
         if self._use_gpu:
             q_new_actions = q_new_actions.to("cuda")
 
-        if self._use_vector_Q:
+        if self._use_vector_q:
             # scalarize Q-value vector by weighting them with the preferences
             q_new_actions = torch.sum(q_new_actions * weight_pref, dim=1, keepdim=True)
 
@@ -149,13 +149,13 @@ class SACTrainer(TorchTrainer):
                 self.target_qf1(next_obs, new_next_actions, *pref_arg),
                 self.target_qf2(next_obs, new_next_actions, *pref_arg),
             )
-            - alpha * new_log_pi  # broadcasted in case of use_vector_Q=True
+            - alpha * new_log_pi  # broadcasted in case of use_vector_q=True
         )
 
-        # Match reward dimension and target dimension:
+        # Match dimensionality of reward and target:
         # If Q-network has vector output, it can handle the vector reward
         # If Q-network has scalar output, scalarize the reward using the preference
-        if not self._use_vector_Q:
+        if not self._use_vector_q:
             # BEFORE: rewards (bs, 2) @ weight_pref (2, 1) => (bs, 1) # "bs"="batch size"
             # NOW:    torch.sum(rewards (bs, 2) * weight_pref (bs, 2), dim=1) => (bs, 1)
             rewards = torch.sum(rewards * weight_pref, dim=1, keepdim=True)
