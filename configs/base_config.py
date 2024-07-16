@@ -41,11 +41,7 @@ base_config = {
         record_evy_n_episodes=5,  # Specifies the interval at which videos should be created in terms of env episodes
     ),
     # PARAMETERS RELEVANT FOR BOTH DO AND RL
-    "iterations_init": 300,  # Number of episodes for all initial designs as provided by the environment class
     "design_cycles": 55,  # Number of design adaptations after the initial designs
-    "iterations": 100,  # Number of training episodes to run for each design, *after* the initial iterations
-    "initial_episodes": 3,  # Number of initial episodes per design before training of the individual networks (useful for filling replay buffer when steps_per_episodes is low)
-    "steps_per_episodes": 1000,  # Number of steps per episode
     "weight_preference": (
         0.5,
         0.5,
@@ -56,8 +52,12 @@ base_config = {
     # REINFORCEMENT LEARNING (RL) PARAMETERS
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
     "condition_on_preference": True,  # Use True to condition the policy and Q networks on the weight preference (input grows by the number of objectives)
+    "use_vector_q": True,  # Use True to use Q-functions with vector output (one value per objective), use False for scalar Q-values
     "scalarize_before_q_loss": False,  # Use True to scalarize Q-target and Q-prediction before loss calculation, use False to feed original values (vectors if use_vector_q, else scalars) to loss function
-    "use_vector_q": False,  # Use True to use Q-functions with vector output (one value per objective), use False for scalar Q-values
+    "iterations_init": 300,  # Number of episodes for all initial designs as provided by the environment class
+    "iterations": 100,  # Number of training episodes to run for each design, *after* the initial iterations
+    "initial_episodes": 3,  # Number of initial RL episodes per design before training of the individual networks (useful for filling replay buffer when steps_per_episodes is low)
+    "steps_per_episodes": 1000,  # Number of steps per episode
     "rl_algorithm_config": dict(
         algo_params=dict(  # Parameters for the RL learner for the individual networks
             discount=0.99,

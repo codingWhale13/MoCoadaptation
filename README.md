@@ -75,8 +75,9 @@ Different experiments are specified by their config files. These files can be fo
 - `initial_model_dir`: If specified, path to checkpoint that should be loaded before training
 - `save_replay_buffer`: Saving the replay buffer allows loading it from a checkpoint later on
 - `video`/*: More control for video recording
-- `use_vector_Q`: Give explicit option to use scalar or vectorized Q function (one value per objective) during training
 - `condition_on_preference`: Give option to condition the policy and Q networks on the weight preference (this should hopefully allow faster adaptation after loading a checkpoint and steering to a different preference)
+- `scalarize_before_q_loss`: Give option to feed scalarized Q values to loss function instead of using 
+- `use_vector_q`: Give explicit option to use scalar or vectorized Q function (one value per objective) during training
 
 **Changed arguments for more clarity:**
 

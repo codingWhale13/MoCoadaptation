@@ -3,7 +3,6 @@ import os
 
 from gym import spaces
 import numpy as np
-import wandb
 
 from .pybullet_evo.gym_locomotion_envs import HalfCheetahMoBulletEnv
 from utils import BestEpisodesVideoRecorder

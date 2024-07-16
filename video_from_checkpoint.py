@@ -5,39 +5,41 @@ import json
 import os
 
 import coadapt
+from utils import add_argparse_arguments
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--exp-dir",
-        type=str,
-        help="Experiment folder (should contain config.json)",
-        required=True,
-    )
-    parser.add_argument(
-        "--save-dir",
-        type=str,
-        help="Output folder for video",
-        default="videos",
+    parser = add_argparse_arguments(
+        parser,
+        [
+            ("data-folder", True),
+            ("save-dir", False),
+        ],
     )
 
     return parser.parse_args()
 
 
-def generate_video(exp_dir, save_dir=None):
+def generate_video(data_folder, save_dir=None):
     # load config
-    with open(os.path.join(exp_dir, "config.json")) as file:
+    with open(os.path.join(data_folder, "config.json")) as file:
         config = json.load(file)
 
-    config["initial_model_dir"] = exp_dir  # enable model loading
+    config["initial_model_dir"] = data_folder  # enable model loading
     config["use_gpu"] = False  # no need for GPU when creating videos
+    config["use_wandb"] = False  # no need for wandb when creating videos
 
     config["env"]["record_video"] = True  # enable video recording
     config["video"]["record_evy_n_episodes"] = 1  # we'll just run a single episode
     if save_dir is not None:
         config["video"]["video_save_dir"] = save_dir
+
+    # temporary stuff for backward compatibility
+    config["use_vector_q"] = config["use_vector_Q"]
+    config["scalarize_before_q_loss"] = False
+    config["condition_on_preference"] = False
 
     co = coadapt.Coadaptation(config)  # checkpoint is loaded in __init__
 
@@ -52,4 +54,4 @@ def generate_video(exp_dir, save_dir=None):
 if __name__ == "__main__":
     args = parse_args()
 
-    generate_video(args.exp_dir, args.save_dir)
+    generate_video(args.data_folder, args.save_dir)

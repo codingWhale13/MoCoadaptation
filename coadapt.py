@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import random
 import time
+from simple_video import SimpleVideoRecorder
 import utils
 
 import numpy as np
@@ -133,15 +134,22 @@ class Coadaptation:
             self._data_design_type = "Initial"
         else:
             self._data_design_type = "Pre-trained"
-            self._load_checkpoint(self._initial_model_dir)
+            self.load_checkpoint(
+                self._initial_model_dir, design_iter=config["design_iter_to_load"]
+            )
 
-    def _load_checkpoint(self, exp_dir):
-        # 1. Load last design checkpoint
+    def load_checkpoint(self, exp_dir, design_iter=None):
+        # 1. Load design checkpoint
         do_dir = os.path.join(exp_dir, "do_checkpoints")
-        file_path = max(os.listdir(do_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
+        num_cycles = max(map(lambda x: int(x.split("_")[-1][:-4]), os.listdir(do_dir)))
+        if design_iter is None:
+            filename = f"data_design_{num_cycles}.csv"
+        else:
+            assert design_iter <= num_cycles, f"Design cycle {design_iter} not found"
+            filename = f"data_design_{design_iter}.csv"
 
         rows = []
-        with open(os.path.join(do_dir, file_path), newline="") as file:
+        with open(os.path.join(do_dir, filename), newline="") as file:
             reader = csv.reader(file)
             for row in reader:
                 rows.append(row)
@@ -149,10 +157,13 @@ class Coadaptation:
         link_lengths = np.array(rows[1], dtype=float)
         self._env.set_new_design(link_lengths)
 
-        # 2. Load last RL checkpoint
+        # 2. Load RL checkpoint
         rl_dir = os.path.join(exp_dir, "rl_checkpoints")
+        if design_iter is None:
+            filename = f"networks_for_design_{num_cycles}.chk"
+        else:
+            filename = f"networks_for_design_{design_iter}.chk"
 
-        filename = max(os.listdir(rl_dir), key=lambda fn: int(fn.split("_")[-1][:-4]))
         network_path = os.path.join(rl_dir, filename)
         network_data = torch.load(network_path, map_location=ptu.device)
         for key, net in self._networks["population"].items():
@@ -162,6 +173,7 @@ class Coadaptation:
             params = network_data["individual"][key]
             net.load_state_dict(params)
 
+        # 3. Load replay buffer if available
         replay_path = os.path.join(rl_dir, "latest_replay_buffer_0.chk")
         if os.path.isfile(replay_path):
             replay_buffer = torch.load(replay_path)
@@ -271,7 +283,27 @@ class Coadaptation:
 
         if self._use_wandb:
             r1, r2 = ep_rewards
-            # wandb.log({"Reward Speed": r1, "Reward Energy": r2})  # save episodic reward
+            wandb.log({"Reward Speed": r1, "Reward Energy": r2})  # save episodic reward
+
+    def create_video_of_episode(self, save_dir, filename):
+        video_recorder = SimpleVideoRecorder(self._env._env, save_dir, filename)
+
+        state = self._prepare_single_episode()
+
+        step_count = 0
+        done = False
+        while not done and step_count < self._episode_length:
+            step_count += 1
+
+            pref = self._weight_pref if self._condition_on_preference else None
+            action, _ = self._policy.get_action(state, pref, deterministic=True)
+
+            new_state, _, done, _ = self._env.step(action)
+            video_recorder.step()
+
+            state = new_state
+
+        video_recorder.save_video()
 
     def _save_do_checkpoint(self):
         """Saves the logged data to the disk as csv files.
@@ -280,9 +312,9 @@ class Coadaptation:
         design an individual log-file is creates in the experiment directory.
         The first row states if the design was one of the initial designs
         (as given by the environment), a random design or an optimized design.
-        The second row gives the design parameters (eta). The third row
-        contains all subsequent cumulative rewards achieved by the policy
-        throughout the reinforcement learning process on the current design.
+        The second row gives the design parameters (eta). The third (and
+        following rows) contains all subsequent cumulative rewards achieved by
+        the policy throughout the RL process on the current design.
         """
         current_design = self._env.get_current_design()
         save_dir = os.path.join(self._run_folder, "do_checkpoints")
@@ -318,15 +350,15 @@ class Coadaptation:
                 checkpoints_ind[key] = net.state_dict()
             network_checkpoint["individual"] = checkpoints_ind
 
-            file_name = f"networks_for_design_{self._design_counter}.chk"
-            torch.save(network_checkpoint, os.path.join(save_dir, file_name))
+            filename = f"networks_for_design_{self._design_counter}.chk"
+            torch.save(network_checkpoint, os.path.join(save_dir, filename))
 
         if self._save_replay_buffer:
             # overwrite last checkpoint for replay buffer
             # (saving it for each design would consume a large amount of memory)
             replay_buffer_checkpoint = self._replay.get_contents()
-            file_name = f"latest_replay_buffer_0.chk"  # "_0" is for convenient loading
-            torch.save(replay_buffer_checkpoint, os.path.join(save_dir, file_name))
+            filename = f"latest_replay_buffer_0.chk"  # "_0" is for convenient loading
+            torch.save(replay_buffer_checkpoint, os.path.join(save_dir, filename))
 
     def _single_rl_iteration(self, train_pop=True):
         """A single iteration.
@@ -379,6 +411,7 @@ class Coadaptation:
                 self.initialize_episode()
                 self._train_rl_policy(iterations, train_pop=False)
         else:
+            self.initialize_episode()
             self._design_counter += 1
             self._train_rl_policy(iterations, train_pop=False)
 
