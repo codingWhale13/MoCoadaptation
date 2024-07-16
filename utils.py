@@ -300,10 +300,6 @@ def add_argparse_arguments(parser, arguments):
             "type": strtobool,
             "help": "Use True for vector output of Q-network, use False for scalar Q-values",
         },
-        "scalarize-before-q-loss": {
-            "type": strtobool,
-            "help": "Use True to scalarize vector Q-values before feeding them to the loss function",
-        },
         "use-wandb": {
             "type": strtobool,
             "help": 'Use True to log the run with wandb ("weights and biases")',

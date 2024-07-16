@@ -22,7 +22,6 @@ ARGS = [
     ("weight-preference", False),
     ("condition-on-preference", False),
     ("use-vector-q", False),
-    ("scalarize-before-q-loss", False),
     ("random-seed", False),
     ("use-gpu", False),
     ("verbose", False),

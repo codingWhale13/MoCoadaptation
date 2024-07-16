@@ -53,7 +53,6 @@ base_config = {
     "rl_method": "SoftActorCritic",  # Which reinforcement learning method to use
     "condition_on_preference": True,  # Use True to condition the policy and Q networks on the weight preference (input grows by the number of objectives)
     "use_vector_q": True,  # Use True to use Q-functions with vector output (one value per objective), use False for scalar Q-values
-    "scalarize_before_q_loss": False,  # Use True to scalarize Q-target and Q-prediction before loss calculation, use False to feed original values (vectors if use_vector_q, else scalars) to loss function
     "iterations_init": 300,  # Number of episodes for all initial designs as provided by the environment class
     "iterations": 100,  # Number of training episodes to run for each design, *after* the initial iterations
     "initial_episodes": 3,  # Number of initial RL episodes per design before training of the individual networks (useful for filling replay buffer when steps_per_episodes is low)

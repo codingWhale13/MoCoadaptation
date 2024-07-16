@@ -20,7 +20,6 @@ class SACTrainer(TorchTrainer):
         target_qf1,
         target_qf2,
         condition_on_preference=True,
-        scalarize_before_q_loss=False,
         use_vector_q=False,
         discount=0.99,
         reward_scale=1.0,
@@ -43,7 +42,6 @@ class SACTrainer(TorchTrainer):
         self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
         self._condition_on_preference = condition_on_preference
         self._use_vector_q = use_vector_q
-        self._scalarize_before_q_loss = scalarize_before_q_loss
         self.env = env
         self.policy = policy
         self.qf1 = qf1
@@ -85,7 +83,7 @@ class SACTrainer(TorchTrainer):
         self._need_to_update_eval_statistics = True
         self._use_gpu = use_gpu
 
-    def train_from_torch(self, batch):
+    def train_from_torch(self, batch, scalarize_before_q_loss=False):
         obs = batch["observations"]
         actions = batch["actions"]
         rewards = batch["rewards"]
@@ -167,7 +165,7 @@ class SACTrainer(TorchTrainer):
             + (1.0 - terminals) * self.discount * target_q_values  # expected return
         ).detach()
 
-        if self._scalarize_before_q_loss:
+        if scalarize_before_q_loss:
             # if use_vector_q=False, the Q values are already scalars and this is redundant
             q1_pred = torch.sum(q1_pred * weight_pref, dim=1)
             q2_pred = torch.sum(q2_pred * weight_pref, dim=1)
