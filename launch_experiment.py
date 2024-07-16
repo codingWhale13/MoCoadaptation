@@ -7,85 +7,34 @@ import random
 
 import numpy as np
 import torch
+from utils import add_argparse_arguments
 import wandb
 
 import coadapt
 from configs import all_configs
 
-
-def strtobool(val):
-    """Convert a string representation of truth to True or False.
-    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
-    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
-    'val' is anything else. Similar to deprecated distutils.util.strtobool.
-    """
-    val = val.lower()
-    if val in ("y", "yes", "t", "true", "on", "1"):
-        return True
-    elif val in ("n", "no", "f", "false", "off", "0"):
-        return False
-    else:
-        raise ValueError(f"Invalid truth value '{val}'")
+ARGS = [
+    ("config-id", "sac_pso_batch"),
+    ("run-name", False),
+    ("data-folder", False),
+    ("save-replay-buffer", False),
+    ("initial-model-dir", False),
+    ("weight-preference", False),
+    ("condition-on-preference", False),
+    ("use-vector-q", False),
+    ("scalarize-before-q-loss", False),
+    ("random-seed", False),
+    ("use-gpu", False),
+    ("verbose", False),
+    ("use-wandb", False),
+]
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-
     # NOTE: For default values, see the specific config files
+    parser = argparse.ArgumentParser()
+    add_argparse_arguments(parser, ARGS)
 
-    parser.add_argument(
-        "--config-id",
-        type=str,
-        help="Name of config file, to specify which config to load",
-        choices=("sac_pso_batch", "sac_pso_sim", "sac_pso_batch_vec"),
-        default="sac_pso_batch",
-    )
-    parser.add_argument(
-        "--run-name",
-        type=str,
-        help="Human-readable name of the experiment, part of experiment folder name and used as wandb run name",
-    )
-    parser.add_argument(
-        "--data-folder",
-        type=str,
-        help="Path to parent folder of experiment run (if not set, sensible default is used)",
-    )
-    parser.add_argument(
-        "--save-replay-buffer",
-        type=str,
-        help="Use True to save the most recent RL replay buffer (can be a few GB large)",
-    )
-    parser.add_argument(
-        "--initial-model-dir",
-        type=str,
-        help="Use True to load the latest checkpoint from this experiment folder at the beginning of training",
-    )
-    parser.add_argument(
-        "--weight-preference",
-        type=float,
-        nargs="+",
-        help="Objective preference in MORL setting (one non-negative value per objective, should add up to 1)",
-    )
-    parser.add_argument(
-        "--random-seed",
-        type=int,
-        help="Random seed for reproducibility (if None, the seed will be randomly generated)",
-    )
-    parser.add_argument(
-        "--use-gpu",
-        type=strtobool,
-        help="Use True to train with GPU and False to train with CPU",
-    )
-    parser.add_argument(
-        "--verbose",
-        type=strtobool,
-        help="Use True for more verbose console output",
-    )
-    parser.add_argument(
-        "--use-wandb",
-        type=strtobool,
-        help='Use True to log the run with wandb ("weights and biases")',
-    )
     return parser.parse_args()
 
 
@@ -94,17 +43,11 @@ def load_config(args):
     config = all_configs[args.config_id]
 
     # Overwrite config values if specified with argparse
-    for arg_name in [
-        "run_name",
-        "data_folder",
-        "save_replay_buffer",
-        "initial_model_dir",
-        "weight_preference",
-        "random_seed",
-        "use_gpu",
-        "verbose",
-        "use_wandb",
-    ]:
+    for arg_name, _ in ARGS:
+        if arg_name == "config-id":
+            continue
+
+        arg_name = arg_name.replace("-", "_")
         arg_value = getattr(args, arg_name, None)
         if arg_value is not None:
             config[arg_name] = arg_value

@@ -209,6 +209,127 @@ class BestEpisodesVideoRecorder:
         )
 
 
+def strtobool(val):
+    """
+    Convert a string representation of truth to True or False.
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else. Similar to deprecated distutils.util.strtobool.
+    """
+    val = val.lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return False
+    else:
+        raise ValueError(f"Invalid truth value '{val}'")
+
+
+def add_argparse_arguments(parser, arguments):
+    """
+    Adds arguments to parser, supplying consistent help messages.
+
+    :param parser: The parser to add the arguments to (will be modified)
+    :param arguments: should be a collection of tuples of form (A, B):
+        A: String, the argument name (with dashes between words and no leading dashes, e.g. "arg-name")
+        B: Boolean (required? yes/no) or other type (default value)
+           NOTE: In case of boolean default value, use string "true" or "false"
+    """
+
+    # Define immutable keyword arguments for `parser.add_argument()`, in particular type and help
+    fixed_kwargs = {
+        # GENERAL ARGUMENTS (USEFUL IN MULTIPLE CONTEXTS)
+        "use-gpu": {
+            "type": strtobool,
+            "help": "Use True for running the code on GPU, use False for CPU",
+        },
+        "random-seed": {
+            "type": int,
+            "help": "Random seed for reproducibility (if not specified, the seed will be randomly generated)",
+        },
+        "data-folder": {
+            "type": str,
+            "help": "Path to parent folder of experiment run (containing a config.json file)",
+        },
+        "data-folders": {
+            "type": str,
+            "help": "Paths to experiment folders (one or more, each containing a config.json file)",
+            "nargs": "+",
+        },
+        "save-dir": {
+            "type": str,
+            "help": "Output folder to save results",
+        },
+        "common-name": {
+            "type": str,
+            "help": "Human-readable name, e.g. for comparing across multiple preferences",
+        },
+        "verbose": {
+            "type": strtobool,
+            "help": "Use True for more verbose console output",
+        },
+        # TRAINING ARGUMENTS
+        "config-id": {
+            "type": str,
+            "help": "Name of config file, to specify which config to load",
+            "choices": ("sac_pso_batch", "sac_pso_sim", "sac_pso_batch_vec"),
+        },
+        "run-name": {
+            "type": str,
+            "help": "Human-readable name of the experiment, part of experiment folder name and used as wandb run name",
+        },
+        "save-replay-buffer": {
+            "type": str,
+            "help": "Use True to save the most recent RL replay buffer (can be a few GB large)",
+        },
+        "initial-model-dir": {
+            "type": str,
+            "help": "If specified, the latest checkpoint from this experiment is loaded at the beginning of training",
+        },
+        "weight-preference": {
+            "type": float,
+            "help": "Objective preference in MORL setting (one non-negative value per objective, should add up to 1)",
+            "nargs": "+",
+        },
+        "condition-on-preference": {
+            "type": strtobool,
+            "help": "Use True to condition policy and Q-networks on the preference",
+        },
+        "use-vector-q": {
+            "type": strtobool,
+            "help": "Use True for vector output of Q-network, use False for scalar Q-values",
+        },
+        "scalarize-before-q-loss": {
+            "type": strtobool,
+            "help": "Use True to scalarize vector Q-values before feeding them to the loss function",
+        },
+        "use-wandb": {
+            "type": strtobool,
+            "help": 'Use True to log the run with wandb ("weights and biases")',
+        },
+        # PLOTTING ARGUMENTS
+        "use-shared-plot": {
+            "type": strtobool,
+            "help": "Use True to plot everything in one plot, use False to create separate plots",
+        },
+    }
+
+    for arg_name, req_def in arguments:
+        if arg_name not in fixed_kwargs:
+            raise ValueError(f'Argument name "{arg_name}" not found')
+
+        parser.add_argument(
+            f"--{arg_name}",
+            **fixed_kwargs[arg_name],
+            **(
+                {"required": req_def}
+                if isinstance(req_def, bool)
+                else {"default": req_def}
+            ),
+        )
+
+
 """
 TODO (if actually needed): upgrade config from old version ("0") to proper version 1
 def upgrade_config(config):
