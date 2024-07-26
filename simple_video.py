@@ -1,8 +1,9 @@
 import os
-from shutil import copyfile, move
 
 import cv2
 import numpy as np
+
+import pybullet as p
 
 
 class SimpleVideoRecorder:
@@ -26,6 +27,10 @@ class SimpleVideoRecorder:
         frame = (frame * 255).astype(np.uint8)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self._vid_writer.write(frame)
+
+        # connect to PyBullet server (for some reason important when recording videos with only a few frames)
+        if p.isConnected() == 0:
+            p.connect(p.GUI)
 
     def step(self):
         self._env.camera_adjust()
