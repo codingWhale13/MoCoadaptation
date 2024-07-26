@@ -1,0 +1,54 @@
+<mujoco model="hopper">
+
+  <statistic extent="2" center="0 0 .5"/>
+
+  <!-- <default>
+    <default class="hopper">
+      <joint type="hinge" axis="0 1 0" limited="true" damping=".05" armature=".2"/>
+      <geom type="capsule" material="self"/>
+      <site type="sphere" size="0.05" group="3"/>
+    </default>
+    <default class="free">
+      <joint limited="false" damping="0" armature="0" stiffness="0"/>
+    </default>
+    <motor ctrlrange="-1 1" ctrllimited="true"/>
+  </default> -->
+
+  <option timestep="0.005"/>
+  <compiler angle="degree"/>
+  <worldbody>
+    <!-- <geom name="floor" type="plane" conaffinity="1" pos="48 0 0" size="50 1 .2" material="grid"/> -->
+    <body name="torso" pos="0 0 1">
+      <joint name="ignorerootx" type="slide" axis="1 0 0" class="free" limited="false" damping="0" armature="0" stiffness="0"/>
+      <joint name="ignorerootz" type="slide" axis="0 0 1" class="free" limited="false" damping="0" armature="0" stiffness="0"/>
+      <joint name="ignorerooty" type="hinge" axis="0 1 0" class="free" limited="false" damping="0" armature="0" stiffness="0"/>
+      <geom name="torso" fromto="0 0 -.05 0 0 .2" size="0.0653" type="capsule" material="self"/>
+      <geom name="nose" fromto=".08 0 .13 .15 0 .14" size="0.03" type="capsule" material="self"/>
+      <body name="pelvis" pos="0 0 -.05">
+        <joint name="waist" range="-30 30" type="hinge" axis="0 1 0" limited="true" damping=".05" armature=".2"/>
+        <geom name="pelvis" fromto="0 0 0 0 0 -.15" size="0.065" type="capsule" material="self"/>
+        <body name="thigh" pos="0 0 -.2">
+          <joint name="hip" range="-170 10" type="hinge" axis="0 1 0" limited="true" damping=".05" armature=".2"/>
+          <geom name="thigh" fromto="0 0 0 0 0 -.33" size="0.04" type="capsule" material="self"/>
+          <body name="calf" pos="0 0 -.33">
+            <joint name="knee" range="5 150" type="hinge" axis="0 1 0" limited="true" damping=".05" armature=".2"/>
+            <geom name="calf" fromto="0 0 0 0 0 -.32" size="0.03" type="capsule" material="self"/>
+            <body name="foot" pos="0 0 -.32">
+              <joint name="ankle" range="-45 45" type="hinge" axis="0 1 0" limited="true" damping=".05" armature=".2"/>
+              <geom name="foot" fromto="-.08 0 0 .17 0 0" size="0.04" type="capsule" material="self"/>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <sensor>
+    <subtreelinvel name="torso_subtreelinvel" body="torso"/>
+  </sensor>
+  <actuator>
+    <motor name="waist" joint="waist" gear="30" ctrlrange="-1 1" ctrllimited="true"/>
+    <motor name="hip" joint="hip" gear="40" ctrlrange="-1 1" ctrllimited="true"/>
+    <motor name="knee" joint="knee" gear="30" ctrlrange="-1 1" ctrllimited="true"/>
+    <motor name="ankle" joint="ankle" gear="10" ctrlrange="-1 1" ctrllimited="true"/>
+  </actuator>
+</mujoco>

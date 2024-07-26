@@ -1,8 +1,10 @@
+import csv
 import cv2
 import os
 from shutil import copyfile, move
 import time
 
+import json
 import numpy as np
 
 import rlkit.torch.pytorch_util as ptu
@@ -209,7 +211,62 @@ class BestEpisodesVideoRecorder:
         )
 
 
-def strtobool(val):
+def get_config(run_dir, filename="config.json"):
+    with open(os.path.join(run_dir, filename)) as file:
+        config = json.load(file)
+
+    return config
+
+
+def get_run_name(run_dir):
+    with open(os.path.join(run_dir, "config.json")) as file:
+        config = json.load(file)
+
+    return config["run_name"]
+
+
+def exp_dir_to_run_dirs(exp_dir):
+    run_dirs = []
+    for dirpath, dirnames, filenames in os.walk(exp_dir):
+        if (
+            "config.json" in filenames
+            and "do_checkpoints" in dirnames
+            and "rl_checkpoints" in dirnames
+        ):  # Make sure experiment did not immediately crash
+            run_dirs.append(dirpath)
+
+    return run_dirs
+
+
+def get_cycle_count(run_dir):
+    do_dir = os.path.join(run_dir, "do_checkpoints")
+    rl_dir = os.path.join(run_dir, "rl_checkpoints")
+
+    # Strip last four characters to get rid of filename ending (.csv or .chk)
+    do_cycle_count = max(map(lambda x: int(x.split("_")[-1][:-4]), os.listdir(do_dir)))
+    rl_cycle_count = max(map(lambda x: int(x.split("_")[-1][:-4]), os.listdir(rl_dir)))
+    assert do_cycle_count == rl_cycle_count, f"Found inconsistent experiment: {run_dir}"
+
+    return do_cycle_count
+
+
+def read_csv(filepath) -> list:
+    """Returns a list of values read from CSV file per row"""
+
+    rows = []
+    with open(filepath, "r", newline="") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            rows.append(row)
+
+    return rows
+
+
+def preftostr(pref: list[float]) -> str:
+    return "-".join(map(str, pref))
+
+
+def strtobool(val: str) -> bool:
     """
     Convert a string representation of truth to True or False.
 
@@ -240,47 +297,77 @@ def add_argparse_arguments(parser, arguments):
     # Define immutable keyword arguments for `parser.add_argument()`, in particular type and help
     fixed_kwargs = {
         # GENERAL ARGUMENTS (USEFUL IN MULTIPLE CONTEXTS)
-        "use-gpu": {
-            "type": strtobool,
-            "help": "Use True for running the code on GPU, use False for CPU",
+        "exp-dir": {
+            "type": str,
+            "help": "Path to folder containing one or more runs (which can be nested in subfolders)",
+        },
+        "run-dir": {
+            "type": str,
+            "help": "Path to individual run folders (containing a config.json file), equivalent to data-folder",
+        },
+        "run-dirs": {
+            "type": str,
+            "help": "One or more paths to individual run folders (each containing a config.json file)",
+            "nargs": "+",
         },
         "random-seed": {
             "type": int,
             "help": "Random seed for reproducibility (if not specified, the seed will be randomly generated)",
         },
-        "data-folder": {
-            "type": str,
-            "help": "Path to parent folder of experiment run (containing a config.json file)",
+        "n-tests": {
+            "type": int,
+            "help": "Number of tests to run",
         },
-        "data-folders": {
-            "type": str,
-            "help": "Paths to experiment folders (one or more, each containing a config.json file)",
-            "nargs": "+",
+        "n-iters": {
+            "type": int,
+            "help": "Number of iterations",
+        },
+        "use-gpu": {
+            "type": strtobool,
+            "help": "Use True for running the code on GPU, use False for CPU",
         },
         "save-dir": {
             "type": str,
             "help": "Output folder to save results",
         },
-        "common-name": {
-            "type": str,
-            "help": "Human-readable name, e.g. for comparing across multiple preferences",
-        },
         "verbose": {
             "type": strtobool,
             "help": "Use True for more verbose console output",
+        },
+        "file-name": {
+            "type": str,
+            "help": 'File name (without file ending), e.g. "my_file"',
+        },
+        "design-cycle": {
+            # "type": str or int,
+            "help": 'Specified the design cycle of interest as an integer (or "last")',
         },
         # TRAINING ARGUMENTS
         "config-id": {
             "type": str,
             "help": "Name of config file, to specify which config to load",
-            "choices": ("sac_pso_batch", "sac_pso_sim", "sac_pso_batch_vec"),
+            "choices": (
+                "sac_pso_batch",
+                "sac_pso_sim",
+                "sac_pso_batch_vec",
+                "sac_pso_batch_walker2d",
+                "sac_pso_batch_hopper",
+            ),
+        },
+        "data-folder": {
+            "type": str,
+            "help": "Path to folder where the data of the experiment run is saved (will contain a config.json file)",
         },
         "run-name": {
             "type": str,
             "help": "Human-readable name of the experiment, part of experiment folder name and used as wandb run name",
         },
+        "load-replay-buffer": {
+            "type": strtobool,
+            "help": "Use True to load the most recent RL replay buffer (can be a few GB large)",
+        },
         "save-replay-buffer": {
-            "type": str,
+            "type": strtobool,
             "help": "Use True to save the most recent RL replay buffer (can be a few GB large)",
         },
         "initial-model-dir": {
@@ -304,10 +391,39 @@ def add_argparse_arguments(parser, arguments):
             "type": strtobool,
             "help": 'Use True to log the run with wandb ("weights and biases")',
         },
-        # PLOTTING ARGUMENTS
+        # EVALUATION AND PLOTTING ARGUMENTS
+        "test-results-dir": {
+            "type": str,
+            "help": "Path to folder with test results (each subfolder should contain 1+ CSV files and an original_config.json)",
+        },
+        "direct-test-dir": {
+            "type": str,
+            "help": "Path to folder with baseline test results",
+        },
+        "steered-test-dirs": {
+            "type": str,
+            "help": "One or more paths to folders with test results of steered algo",
+            "nargs": "+",
+        },
+        "skip-initial-designs": {
+            "type": strtobool,
+            "help": "Use True to skip testing on initial designs",
+        },
+        "skip-random-designs": {
+            "type": strtobool,
+            "help": "Use True to skip testing on random designs",
+        },
+        "marker-size": {
+            "type": int,
+            "help": "Size of markers used in plots",
+        },
         "use-shared-plot": {
             "type": strtobool,
             "help": "Use True to plot everything in one plot, use False to create separate plots",
+        },
+        "common-name": {
+            "type": str,
+            "help": "Human-readable name, e.g. for comparing across multiple preferences",
         },
     }
 

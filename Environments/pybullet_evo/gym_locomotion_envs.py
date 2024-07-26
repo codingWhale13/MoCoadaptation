@@ -2,7 +2,7 @@ from pybullet_envs.scene_stadium import SinglePlayerStadiumScene
 from pybullet_envs.env_bases import MJCFBaseBulletEnv
 import numpy as np
 import pybullet
-from .robot_locomotors import HalfCheetah
+from .robot_locomotors import HalfCheetah, Walker2d, Hopper
 import os, inspect
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -67,6 +67,9 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
 
     def _isDone(self):
         return self._alive < 0
+
+    def disconnect(self):
+        self._p.disconnect()
 
     def move_robot(self, init_x, init_y, init_z):
         "Used by multiplayer stadium to move sideways, to another running lane."
@@ -232,6 +235,11 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
         image = image[:, :, 0:3]
         return image
 
+    def reset_design(self, design):
+        self.stateId = -1
+        self.scene = None
+        self.robot.reset_design(self._p, design)
+
 
 class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
     def __init__(self, render=False, design=None):
@@ -243,9 +251,6 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
 
     def _isDone(self):
         return False
-
-    def disconnect(self):
-        self._p.disconnect()
 
     def step(self, a):
         if (
@@ -264,27 +269,19 @@ class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
 
         return state, reward, bool(done), {}
 
-    def reset_design(self, design):
-        self.stateId = -1
-        self.scene = None
-        self.robot.reset_design(self._p, design)
-
 
 # Needed for multiobjective class of halfcheetah
 class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
-    def __init__(self, render=False, design=None, reward_dim=2):
+    def __init__(self, render=False, design=None):
         self.robot = HalfCheetah(design)
         WalkerBaseBulletEnv.__init__(self, self.robot, render)
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
-        self.reward_dim = reward_dim  # only bi-objective supported for now
+        self.reward_dim = 2
 
     def _isDone(self):
         return False
-
-    def disconnect(self):
-        self._p.disconnect()
 
     def step(self, a):
         if (
@@ -299,8 +296,9 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
         if not np.isfinite(state).all():
             print("~INF~", state)
             done = 0
+
         reward_run = max(state[-5] / 10.0, 0.0)
-        reward_energy = 4 - 1 * np.square(a).sum()  # UNDERWORK
+        reward_energy = 4 - 1 * np.square(a).sum()
 
         return (
             state,
@@ -309,7 +307,95 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
             {"obj": np.array([reward_run, reward_energy])},
         )  # to numpy array instead of dict #return state, {'obj': np.array([reward_run, reward_energy])}, bool(done), {}
 
+
+class Walker2dMoBulletEnv(WalkerBaseBulletEnv):
+    def __init__(self, render=False, design=None):
+        self.robot = Walker2d(design)
+        WalkerBaseBulletEnv.__init__(self, self.robot, render)
+        self.observation_space = spaces.Box(
+            -np.inf, np.inf, shape=[17], dtype=np.float32
+        )
+        self.reward_dim = 2
+
+    def _isDone(self):
+        return False
+
+    def step(self, a):
+        if (
+            not self.scene.multiplayer
+        ):  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
+            self.robot.apply_action(a)
+            self.scene.global_step()
+
+        state = self.robot.calc_state()  # also calculates self.joints_at_limit
+
+        done = self._isDone()
+        if not np.isfinite(state).all():
+            print("~INF~", state)
+            done = 0
+
+        x_speed = max(state[-5], 0.0)
+        pitch_body = state[-2]
+        height = state[-1]
+        upright = -np.linalg.norm(pitch_body) * 0.1
+        reached_min_height = max(float(height > 0.8), 0.1)
+
+        reward_run = (reached_min_height * (x_speed + 1) + upright) / 10.0
+        reward_energy = 4 - 1 * np.square(a).sum()
+
+        return (
+            state,
+            np.array([reward_run, reward_energy]),
+            bool(done),
+            {"obj": np.array([reward_run, reward_energy])},
+        )
+
+
+class HopperMoBulletEnv(WalkerBaseBulletEnv):
+    def __init__(self, render=False, design=None):
+        self.robot = Hopper(design)
+        WalkerBaseBulletEnv.__init__(self, self.robot, render)
+        self.observation_space = spaces.Box(
+            -np.inf, np.inf, shape=[8 + 5], dtype=np.float32
+        )
+        self.reward_dim = 3
+
+    def _isDone(self):
+        return False
+
     def reset_design(self, design):
-        self.stateId = -1
-        self.scene = None
-        self.robot.reset_design(self._p, design)
+        super().reset_design(design)
+
+        # TODO: double-check that this is the same as in PGMORL implementation
+        self.initial_height = self.robot.calc_state()[-1]
+
+    def step(self, a):
+        if (
+            not self.scene.multiplayer
+        ):  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
+            self.robot.apply_action(a)
+            self.scene.global_step()
+
+        state = self.robot.calc_state()  # also calculates self.joints_at_limit
+
+        done = self._isDone()
+        if not np.isfinite(state).all():
+            print("~INF~", state)
+            done = 0
+
+        x_speed = max(state[-5], 0.0)
+        pitch_body = state[-2]
+        height = state[-1]
+        upright = -np.linalg.norm(pitch_body) * 0.1
+        reached_min_height = max(float(height > 0.8), 0.1)
+
+        reward_run = (reached_min_height * (x_speed + 1) + upright) / 10.0
+        reward_jump = 12.0 * (height - self.initial_height)
+        reward_energy = 4.0 - 1.0 * np.square(a).sum()
+
+        return (
+            state,
+            np.array([reward_run, reward_jump, reward_energy]),
+            bool(done),
+            {"obj": np.array([reward_run, reward_jump, reward_energy])},
+        )
