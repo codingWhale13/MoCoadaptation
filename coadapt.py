@@ -13,7 +13,7 @@ import wandb
 
 from DO.pso_batch import PSOBatch
 from DO.pso_sim import PSOSimulation
-from Environments.evoenvsMO import HalfCheetahEnvMO
+from Environments.evoenvsMO import HalfCheetahEnvMO, HopperEnvMO, Walker2dEnvMO
 from RL.evoreplay import EvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 import rlkit.torch.pytorch_util as ptu
@@ -22,6 +22,10 @@ import rlkit.torch.pytorch_util as ptu
 def select_env(env_name):
     if env_name == "HalfCheetah":
         return HalfCheetahEnvMO
+    elif env_name == "Walker2d":
+        return Walker2dEnvMO
+    elif env_name == "Hopper":
+        return HopperEnvMO
 
     raise ValueError(f"Environment name '{env_name}' not found")
 
@@ -57,7 +61,7 @@ def select_design_opt_algo(algo_name):
 
 
 class Coadaptation:
-    def __init__(self, config):
+    def __init__(self, config, design_iter_to_load=None):
         self._verbose = config["verbose"]
         self._use_wandb = config["use_wandb"]
         self._run_folder = config["run_folder"]
@@ -82,10 +86,10 @@ class Coadaptation:
             wandb.init(
                 project=config["project_name"],
                 name=config["run_name"],
-                dir=Path(__file__).parent,
+                dir="/scratch/work/kielen1",
                 # Avoid large debug-internal.log files (see https://github.com/wandb/wandb/issues/4223)
                 settings=wandb.Settings(
-                    log_internal=str(Path(__file__).parent / "wandb" / "null"),
+                    log_internal="/scratch/work/kielen1/wandb/null",
                 ),
             )
 
@@ -98,13 +102,21 @@ class Coadaptation:
         # Initialize env
         env_cls = select_env(config["env"]["env_name"])
         # energy reward is approximately 1.725 larger than running reward
-        self._env = env_cls(config=config, reward_scaling_energy=0.27532)
+        if config["env"]["env_name"] == "HalfCheetah":
+            print("Using reward scaling")
+            self._env = env_cls(config=config, reward_scaling_energy=0.27532)
+        else:
+            print(
+                f"Using no reward scaling in env {config['env']['env_name']} (for now)"
+            )
+            self._env = env_cls(config=config)
 
         # Initialize replay buffer (used by both RL algo and DO algo)
         self._replay = EvoReplayLocalGlobalStart(
             self._env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
+            reward_dim=self._env.reward_dim,
             verbose=self._verbose,
         )
 
@@ -135,21 +147,27 @@ class Coadaptation:
         else:
             self._data_design_type = "Pre-trained"
             self.load_checkpoint(
-                self._initial_model_dir, design_iter=config["design_iter_to_load"]
+                self._initial_model_dir,
+                load_replay_buffer=config["load_replay_buffer"],
+                design_iter=design_iter_to_load,
             )
 
-    def load_checkpoint(self, exp_dir, design_iter=None):
+    def load_checkpoint(
+        self,
+        exp_dir,
+        load_replay_buffer=True,
+        design_iter=None,
+    ):
         # 1. Load design checkpoint
-        do_dir = os.path.join(exp_dir, "do_checkpoints")
-        num_cycles = max(map(lambda x: int(x.split("_")[-1][:-4]), os.listdir(do_dir)))
+        num_cycles = utils.get_cycle_count(exp_dir)
         if design_iter is None:
-            filename = f"data_design_{num_cycles}.csv"
+            file = f"data_design_{num_cycles}.csv"
         else:
             assert design_iter <= num_cycles, f"Design cycle {design_iter} not found"
-            filename = f"data_design_{design_iter}.csv"
+            file = f"data_design_{design_iter}.csv"
 
         rows = []
-        with open(os.path.join(do_dir, filename), newline="") as file:
+        with open(os.path.join(exp_dir, "do_checkpoints", file), newline="") as file:
             reader = csv.reader(file)
             for row in reader:
                 rows.append(row)
@@ -160,11 +178,11 @@ class Coadaptation:
         # 2. Load RL checkpoint
         rl_dir = os.path.join(exp_dir, "rl_checkpoints")
         if design_iter is None:
-            filename = f"networks_for_design_{num_cycles}.chk"
+            file = f"networks_for_design_{num_cycles}.chk"
         else:
-            filename = f"networks_for_design_{design_iter}.chk"
+            file = f"networks_for_design_{design_iter}.chk"
 
-        network_path = os.path.join(rl_dir, filename)
+        network_path = os.path.join(rl_dir, file)
         network_data = torch.load(network_path, map_location=ptu.device)
         for key, net in self._networks["population"].items():
             params = network_data["population"][key]
@@ -175,7 +193,7 @@ class Coadaptation:
 
         # 3. Load replay buffer if available
         replay_path = os.path.join(rl_dir, "latest_replay_buffer_0.chk")
-        if os.path.isfile(replay_path):
+        if load_replay_buffer and os.path.isfile(replay_path):
             replay_buffer = torch.load(replay_path)
             self._replay.set_contents(replay_buffer)
 
@@ -259,8 +277,8 @@ class Coadaptation:
         state = self._prepare_single_episode()
 
         ep_states = np.empty((0, state.shape[-1]))
-        ep_actions = np.empty((0, 6))
-        ep_rewards = np.zeros(2)
+        ep_actions = np.empty((0, self._env.action_dim))
+        ep_rewards = np.zeros(self._env.reward_dim)
         step_count = 0
         done = False
         while not done and step_count < self._episode_length:
@@ -282,10 +300,17 @@ class Coadaptation:
         self._actions.append(ep_actions)
 
         if self._use_wandb:
-            r1, r2 = ep_rewards
-            wandb.log({"Reward Speed": r1, "Reward Energy": r2})  # save episodic reward
+            # save episodic reward
+            # TODO: make more generic
+            if len(ep_rewards) == 2:
+                r1, r2 = ep_rewards
+                wandb.log({"Reward Speed": r1, "Reward Energy": r2})
+            elif len(ep_rewards) == 3:
+                r1, r2, r3 = ep_rewards
+                wandb.log({"Reward Speed": r1, "Reward Jump": r2, "Reward Energy": r3})
 
     def create_video_of_episode(self, save_dir, filename):
+        self.initialize_episode()
         video_recorder = SimpleVideoRecorder(self._env._env, save_dir, filename)
 
         state = self._prepare_single_episode()
@@ -293,8 +318,6 @@ class Coadaptation:
         step_count = 0
         done = False
         while not done and step_count < self._episode_length:
-            step_count += 1
-
             pref = self._weight_pref if self._condition_on_preference else None
             action, _ = self._policy.get_action(state, pref, deterministic=True)
 
@@ -302,6 +325,7 @@ class Coadaptation:
             video_recorder.step()
 
             state = new_state
+            step_count += 1
 
         video_recorder.save_video()
 

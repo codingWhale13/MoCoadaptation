@@ -10,22 +10,36 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
         env,
         max_replay_buffer_size_species,
         max_replay_buffer_size_population,
+        replace=True,
+        reward_dim=2,
         verbose=False,
     ):
         self._species_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_species
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_species,
+            replace=replace,
+            reward_dim=reward_dim,
         )
         self._population_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_population,
+            replace=replace,
+            reward_dim=reward_dim,
         )
         self._init_state_buffer = EnvReplayBuffer(
-            env=env, max_replay_buffer_size=max_replay_buffer_size_population
+            env=env,
+            max_replay_buffer_size=max_replay_buffer_size_population,
+            replace=replace,
+            reward_dim=reward_dim,
         )
         self._env = env
-        self._max_replay_buffer_size_species = max_replay_buffer_size_species
         self._mode = "species"
         self._ep_counter = 0
         self._expect_init_state = True
+
+        self._max_replay_buffer_size_species = max_replay_buffer_size_species
+        self._replace = replace
+        self._reward_dim = reward_dim
 
         if verbose:
             print("Using EvoReplayLocalGlobalStart as replay buffer")
@@ -129,7 +143,10 @@ class EvoReplayLocalGlobalStart(ReplayBuffer):
 
     def reset_species_buffer(self):
         self._species_buffer = EnvReplayBuffer(
-            env=self._env, max_replay_buffer_size=self._max_replay_buffer_size_species
+            env=self._env,
+            max_replay_buffer_size=self._max_replay_buffer_size_species,
+            replace=self._replace,
+            reward_dim=self._reward_dim,
         )
         self._ep_counter = 0
 

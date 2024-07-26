@@ -23,6 +23,8 @@ class EnvReplayBuffer(SimpleReplayBuffer):
         max_replay_buffer_size,
         env,
         env_info_sizes=None,
+        replace=True,
+        reward_dim=2,
     ):
         """
         :param max_replay_buffer_size:
@@ -45,6 +47,8 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             observation_dim=observation_dim,
             action_dim=get_dim(self._action_space),
             env_info_sizes=env_info_sizes,
+            replace=replace,
+            reward_dim=reward_dim,
         )
 
     def add_sample(
