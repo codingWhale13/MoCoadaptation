@@ -17,6 +17,7 @@ ARGS = [
     ("config-id", "sac_pso_batch"),
     ("run-name", False),
     ("data-folder", False),
+    ("load-replay-buffer", False),
     ("save-replay-buffer", False),
     ("initial-model-dir", False),
     ("weight-preference", False),

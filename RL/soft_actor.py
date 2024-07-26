@@ -121,7 +121,7 @@ class SoftActorCritic(RL_algorithm):
             self._replay.set_mode("species")
             for _ in range(self._nmbr_indiv_updates):
                 batch = self._replay.random_batch(self._batch_size)
-                self._algorithm_ind.train(batch, scalarize_before_q_loss=True)
+                self._algorithm_ind.train(batch, scalarize_before_q_loss=False)
 
         if train_pop:
             # Get only samples from the population buffer

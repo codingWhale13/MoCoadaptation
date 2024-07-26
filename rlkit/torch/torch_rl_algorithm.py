@@ -26,10 +26,10 @@ class TorchTrainer(Trainer, metaclass=abc.ABCMeta):
     def __init__(self):
         self._num_train_steps = 0
 
-    def train(self, np_batch):
+    def train(self, np_batch, scalarize_before_q_loss=False):
         self._num_train_steps += 1
         batch = np_to_pytorch_batch(np_batch)
-        self.train_from_torch(batch)
+        self.train_from_torch(batch, scalarize_before_q_loss=scalarize_before_q_loss)
 
     def get_diagnostics(self):
         return OrderedDict(
@@ -39,7 +39,7 @@ class TorchTrainer(Trainer, metaclass=abc.ABCMeta):
         )
 
     @abc.abstractmethod
-    def train_from_torch(self, batch):
+    def train_from_torch(self, batch, scalarize_before_q_loss=False):
         pass
 
     @property
