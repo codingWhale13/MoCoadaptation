@@ -1,9 +1,10 @@
 from copy import deepcopy
 
-from configs import sac_pso_batch
+from configs import base_config
 
 
-sac_pso_batch_hopper = deepcopy(sac_pso_batch)
-
+sac_pso_batch_hopper = deepcopy(base_config)
+sac_pso_batch_hopper["config_name"] = "sac_pso_batch_hopper"
+sac_pso_batch_hopper["data_folder"] = "experiments/sac_pso_batch/hopper"
+sac_pso_batch_hopper["design_optim_method"] = "pso_batch"
 sac_pso_batch_hopper["env"]["env_name"] = "Hopper"
-sac_pso_batch_hopper["env"]["record_video"] = True  # TODO: remove this
