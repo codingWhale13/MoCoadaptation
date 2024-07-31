@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from torch import nn as nn
 
-from rlkit.policies.base import ExplorationPolicy, Policy
 from rlkit.torch.core import eval_np
 from rlkit.torch.distributions import TanhNormal
 from rlkit.torch.networks import Mlp
@@ -12,7 +11,7 @@ LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
 
 
-class TanhGaussianPolicy(Mlp, ExplorationPolicy):
+class TanhGaussianPolicy(Mlp):
     """
     Usage:
 
@@ -127,7 +126,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         )
 
 
-class MakeDeterministic(nn.Module, Policy):
+class MakeDeterministic(nn.Module):
     def __init__(self, stochastic_policy):
         super().__init__()
         self.stochastic_policy = stochastic_policy

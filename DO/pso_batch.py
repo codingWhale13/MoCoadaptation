@@ -14,9 +14,19 @@ class PSOBatch(DesignOptimization):
         self._state_batch_size = config["state_batch_size"]
         self._condition_on_preference = config["condition_on_preference"]
 
-    def optimize_design(self, design, q_network, policy_network, verbose=False):
+    def optimize_design(
+        self,
+        design,
+        q_network,
+        policy_network,
+        old_replay_portion=0,
+        verbose=False,
+    ):
         self._replay.set_mode("start")
-        initial_batch = self._replay.random_batch(self._state_batch_size)
+        initial_batch = self._replay.random_batch(
+            batch_size=self._state_batch_size,
+            old_replay_portion=old_replay_portion,
+        )
         prefs = ptu.from_numpy(initial_batch["weight_preferences"])
 
         design_idxs = self._env.get_design_dimensions()

@@ -1,18 +1,24 @@
-from rlkit.torch.sac.policies import TanhGaussianPolicy
-
-# from rlkit.torch.sac.sac import SoftActorCritic
-from rlkit.torch.networks import FlattenMlp
 import numpy as np
-from .rl_algorithm import RL_algorithm
+import torch
+
+from RL.replay_mix import MixedEvoReplayLocalGlobalStart
+from rlkit.torch.sac.policies import TanhGaussianPolicy
+from rlkit.torch.networks import FlattenMlp
 from rlkit.torch.sac.sac import SACTrainer as SoftActorCritic_rlkit
 import rlkit.torch.pytorch_util as ptu
-import torch
 import utils
 
 
-# networks = {individual:, population:}
-class SoftActorCritic(RL_algorithm):
-    def __init__(self, config, env, replay, networks, wandb_instance, use_gpu=False):
+class SoftActorCritic:
+    def __init__(
+        self,
+        config,
+        env,
+        replay: MixedEvoReplayLocalGlobalStart,
+        networks,
+        wandb_instance,
+        use_gpu=False,
+    ):
         """Bascally a wrapper class for SAC from rlkit.
 
         Args:
@@ -22,7 +28,17 @@ class SoftActorCritic(RL_algorithm):
             networks: dict containing two sub-dicts, 'individual' and 'population'
                 which contain the networks.
         """
-        super().__init__(config, env, replay, networks)
+        self._config = config
+        self.file_str = config["run_folder"]
+
+        self._env = env
+        self._replay = replay
+        self._networks = networks
+
+        if "use_only_global_networks" in config.keys():
+            self._use_only_global_networks = config["use_only_global_networks"]
+        else:
+            self._use_only_global_networks = False
 
         self._variant_pop = config["rl_algorithm_config"]["algo_params_pop"]
         self._variant_spec = config["rl_algorithm_config"]["algo_params"]
@@ -109,7 +125,7 @@ class SoftActorCritic(RL_algorithm):
         # self._algorithm_ind.target_vf.eval()
         # self._algorithm_ind.to(ptu.device)
 
-    def single_train_step(self, train_ind=True, train_pop=False):
+    def single_train_step(self, old_replay_portion=0, train_ind=True, train_pop=False):
         """A single trianing step.
 
         Args:
@@ -120,14 +136,14 @@ class SoftActorCritic(RL_algorithm):
             # Get only samples from the species buffer
             self._replay.set_mode("species")
             for _ in range(self._nmbr_indiv_updates):
-                batch = self._replay.random_batch(self._batch_size)
+                batch = self._replay.random_batch(self._batch_size, old_replay_portion)
                 self._algorithm_ind.train(batch, scalarize_before_q_loss=False)
 
         if train_pop:
             # Get only samples from the population buffer
             self._replay.set_mode("population")
             for _ in range(self._nmbr_pop_updates):
-                batch = self._replay.random_batch(self._batch_size)
+                batch = self._replay.random_batch(self._batch_size, old_replay_portion)
                 self._algorithm_pop.train(batch, scalarize_before_q_loss=False)
 
     @staticmethod

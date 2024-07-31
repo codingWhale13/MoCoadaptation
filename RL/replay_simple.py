@@ -1,24 +1,36 @@
+import warnings
 from collections import OrderedDict
 
+from gym.spaces import Box, Discrete, Tuple
 import numpy as np
-import warnings
-
-from rlkit.data_management.replay_buffer import ReplayBuffer
 
 
-class SimpleReplayBuffer(ReplayBuffer):
+def get_dim(space):
+    if isinstance(space, Box):
+        return space.low.size
+    elif isinstance(space, Discrete):
+        return space.n
+    elif isinstance(space, Tuple):
+        return sum(get_dim(subspace) for subspace in space.spaces)
+    elif hasattr(space, "flat_dim"):
+        return space.flat_dim
+    else:
+        raise TypeError("Unknown space: {}".format(space))
+
+
+class SimpleReplayBuffer:
     def __init__(
         self,
+        env,
         max_replay_buffer_size,
-        observation_dim,
-        action_dim,
-        env_info_sizes,
         replace=True,
-        reward_dim=2,
+        env_info_sizes=None,
     ):
+        self._observation_dim = get_dim(env.observation_space)
+        self._action_space = env.action_space
+        self._action_dim = get_dim(self._action_space)
+
         self._max_replay_buffer_size = max_replay_buffer_size
-        self._observation_dim = observation_dim
-        self._action_dim = action_dim
         self._replace = replace
         self._top = 0
         self._size = 0
@@ -26,15 +38,17 @@ class SimpleReplayBuffer(ReplayBuffer):
         # It's a bit memory inefficient to save the observations twice,
         # but it makes the code *much* easier since you no longer have to
         # worry about termination conditions.
-        self._observations = np.zeros((max_replay_buffer_size, observation_dim))
-        self._next_obs = np.zeros((max_replay_buffer_size, observation_dim))
-        self._actions = np.zeros((max_replay_buffer_size, action_dim))
-        self._rewards = np.zeros((max_replay_buffer_size, reward_dim))
+        self._observations = np.zeros((max_replay_buffer_size, self._observation_dim))
+        self._next_obs = np.zeros((max_replay_buffer_size, self._observation_dim))
+        self._actions = np.zeros((max_replay_buffer_size, self._action_dim))
+        self._rewards = np.zeros((max_replay_buffer_size, env.reward_dim))
         # self._terminals[i] represents the terminal flag received at time i
         self._terminals = np.zeros((max_replay_buffer_size, 1), dtype="uint8")
-        self._weight_pref = np.zeros((max_replay_buffer_size, reward_dim))
+        self._weight_pref = np.zeros((max_replay_buffer_size, env.reward_dim))
 
-        # Define self._env_infos[key][i] to be the return value of env_info[key] at time i
+        # self._env_infos[key][i] represents the return value of env_info[key] at time i
+        if env_info_sizes is None:
+            env_info_sizes = env.info_sizes if hasattr(env, "info_sizes") else dict()
         self._env_infos = {}
         for key, size in env_info_sizes.items():
             self._env_infos[key] = np.zeros((max_replay_buffer_size, size))
@@ -47,18 +61,23 @@ class SimpleReplayBuffer(ReplayBuffer):
         reward,
         next_observation,
         terminal,
-        env_info,
         weight_preference,
+        env_info,
     ):
+        if isinstance(self._action_space, Discrete):
+            action_temp = np.zeros(self._action_dim)
+            action_temp[action] = 1
+            action = action_temp
+
         self._observations[self._top] = observation
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._next_obs[self._top] = next_observation
         self._terminals[self._top] = terminal
         self._weight_pref[self._top] = weight_preference
-
         for key in self._env_info_keys:
             self._env_infos[key][self._top] = env_info[key]
+
         self._advance()
 
     def terminate_episode(self):
@@ -84,8 +103,8 @@ class SimpleReplayBuffer(ReplayBuffer):
             observations=self._observations[indices],
             actions=self._actions[indices],
             rewards=self._rewards[indices],
-            terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
+            terminals=self._terminals[indices],
             weight_preferences=self._weight_pref[indices],
         )
         for key in self._env_info_keys:
@@ -99,16 +118,16 @@ class SimpleReplayBuffer(ReplayBuffer):
             observations=self._observations,
             actions=self._actions,
             rewards=self._rewards,
-            terminals=self._terminals,
             next_observations=self._next_obs,
+            terminals=self._terminals,
+            weight_preferences=self._weight_pref,
             top=self._top,
             size=self._size,
-            weight_preferences=self._weight_pref,
         )
         # NOTE: the remaining attributes (_observation_dim, _action_dim,
-        # _max_replay_buffer_size, _env_infos, _replace) are not saved because
-        # they are only set once in __init__ and we assume these values to not
-        # change between saving and loading the replay buffer
+        # _max_replay_buffer_size, _env_infos, _replace) are not included
+        # because they are only set once in __init__ and we assume these
+        # values to not change between saving and loading the replay buffer.
 
         return batch
 
@@ -116,11 +135,11 @@ class SimpleReplayBuffer(ReplayBuffer):
         self._observations = contents["observations"]
         self._actions = contents["actions"]
         self._rewards = contents["rewards"]
-        self._terminals = contents["terminals"]
         self._next_obs = contents["next_observations"]
+        self._terminals = contents["terminals"]
+        self._weight_pref = contents["weight_preferences"]
         self._top = contents["top"]
         self._size = contents["size"]
-        self._weight_pref = contents["weight_preferences"]
 
     def rebuild_env_info_dict(self, idx):
         return {key: self._env_infos[key][idx] for key in self._env_info_keys}

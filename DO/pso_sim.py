@@ -15,7 +15,14 @@ class PSOSimulation(DesignOptimization):
         self._episode_length = config["steps_per_episodes"]
         self._condition_on_preference = config["condition_on_preference"]
 
-    def optimize_design(self, design, q_network, policy_network, verbose=False):
+    def optimize_design(
+        self,
+        design,
+        q_network,
+        policy_network,
+        old_replay_portion=0,
+        verbose=False,
+    ):
         # NOTE: Design of the environment is reset. Previous design will be lost.
 
         # temporarily disable video recording to avoid creation of many useless folders
@@ -27,7 +34,10 @@ class PSOSimulation(DesignOptimization):
             state = self._env.reset()
             reward_episode = []
 
-            initial_batch = self._replay.random_batch(self._state_batch_size)
+            initial_batch = self._replay.random_batch(
+                batch_size=self._state_batch_size,
+                old_replay_portion=old_replay_portion,
+            )
             weights_np = initial_batch["weight_preferences"].cpu().numpy()
 
             done = False

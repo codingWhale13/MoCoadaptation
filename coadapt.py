@@ -1,22 +1,20 @@
 import csv
 import os
-from pathlib import Path
 import random
 import time
-from simple_video import SimpleVideoRecorder
-import utils
 
 import numpy as np
 import torch
 import wandb
 
-
 from DO.pso_batch import PSOBatch
 from DO.pso_sim import PSOSimulation
 from Environments.evoenvsMO import HalfCheetahEnvMO, HopperEnvMO, Walker2dEnvMO
-from RL.evoreplay import EvoReplayLocalGlobalStart
+from RL.replay_mix import MixedEvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 import rlkit.torch.pytorch_util as ptu
+from simple_video import SimpleVideoRecorder
+import utils
 
 
 def select_env(env_name):
@@ -81,6 +79,10 @@ class Coadaptation:
 
         self._weight_pref = np.array(config["weight_preference"])
 
+        self._old_replay_portion = config["old_replay_portion"]
+        if not config["load_replay_buffer"]:
+            self._old_replay_portion = 0
+
         # Start wandb experiment
         if self._use_wandb:
             wandb.init(
@@ -103,21 +105,15 @@ class Coadaptation:
         env_cls = select_env(config["env"]["env_name"])
         # energy reward is approximately 1.725 larger than running reward
         if config["env"]["env_name"] == "HalfCheetah":
-            print("Using reward scaling")
             self._env = env_cls(config=config, reward_scaling_energy=0.27532)
         else:
-            print(
-                f"Using no reward scaling in env {config['env']['env_name']} (for now)"
-            )
             self._env = env_cls(config=config)
 
         # Initialize replay buffer (used by both RL algo and DO algo)
-        self._replay = EvoReplayLocalGlobalStart(
+        self._replay = MixedEvoReplayLocalGlobalStart(
             self._env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
-            reward_dim=self._env.reward_dim,
-            verbose=self._verbose,
         )
 
         # Initialize RL algo
@@ -195,7 +191,7 @@ class Coadaptation:
         replay_path = os.path.join(rl_dir, "latest_replay_buffer_0.chk")
         if load_replay_buffer and os.path.isfile(replay_path):
             replay_buffer = torch.load(replay_path)
-            self._replay.set_contents(replay_buffer)
+            self._replay_old.set_contents(replay_buffer)
 
     def initialize_episode(self):
         """Initializations required before the first episode.
@@ -204,7 +200,7 @@ class Coadaptation:
         executed. Resets variables such as _rewards for logging purposes etc.
         """
         self._rl_algo.episode_init()
-        self._replay.reset_species_buffer()
+        self._replay_new.reset_species_buffer()
 
         self._states = []
         self._actions = []
@@ -264,8 +260,8 @@ class Coadaptation:
                 weight_preference_species=self._weight_pref,
                 weight_preference_population=weight_pref_pop,
             )
-
             state = new_state
+
         self._replay.terminate_episode()
 
     def execute_policy(self):
@@ -402,7 +398,11 @@ class Coadaptation:
         self._collect_training_experience()
 
         if self._episode_counter >= self._initial_episodes:
-            self._rl_algo.single_train_step(train_ind=True, train_pop=train_pop)
+            self._rl_algo.single_train_step(
+                old_replay_portion=self._old_replay_portion,
+                train_ind=True,
+                train_pop=train_pop,
+            )
 
         self._episode_counter += 1
         self.execute_policy()
@@ -467,6 +467,7 @@ class Coadaptation:
             design=optimized_params,
             q_network=q_network,
             policy_network=policy_network,
+            old_replay_portion=self._old_replay_portion,
             verbose=self._verbose,
         )
 
@@ -492,6 +493,7 @@ class Coadaptation:
                     design=optimized_params,
                     q_network=q_network,
                     policy_network=policy_network,
+                    old_replay_portion=self._old_replay_portion,
                     verbose=self._verbose,
                 )
                 optimized_params = list(optimized_params)
