@@ -9,7 +9,7 @@ import wandb
 
 from DO.pso_batch import PSOBatch
 from DO.pso_sim import PSOSimulation
-from Environments.evoenvsMO import HalfCheetahEnvMO, HopperEnvMO, Walker2dEnvMO
+from environments.evoenvsMO import HalfCheetahEnvMO, HopperEnvMO, Walker2dEnvMO
 from RL.replay_mix import MixedEvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 import rlkit.torch.pytorch_util as ptu
@@ -416,7 +416,7 @@ class Coadaptation:
         self._save_do_checkpoint()  # save DO checkpoint (and rewards) in CSV
         self._save_rl_checkpoint()  # save RL checkpoint (network weights)
 
-    def _intial_design_loop(self, iterations):
+    def _initial_design_loop(self, iterations):
         """The initial training loop for initial designs.
 
         The initial training loop in which no designs are optimized but only
@@ -512,7 +512,7 @@ class Coadaptation:
         It is possible to have different numbers of iterations for initial
         designs and the design optimization process.
         """
-        self._intial_design_loop(self._iterations_init)
+        self._initial_design_loop(self._iterations_init)
         self._training_loop(
             iterations=self._iterations,
             design_cycles=self._design_cycles,

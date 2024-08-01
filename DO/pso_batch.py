@@ -1,26 +1,21 @@
+from environments.evoenvsMO import MOEnvBase
 import numpy as np
+import pyswarms as ps
 import torch
 
 import rlkit.torch.pytorch_util as ptu
-import pyswarms as ps
-
 from .design_optimization import DesignOptimization
 
 
 class PSOBatch(DesignOptimization):
-    def __init__(self, config, replay, env):
+    def __init__(self, config, replay, env: MOEnvBase):
         self._env = env
         self._replay = replay
         self._state_batch_size = config["state_batch_size"]
         self._condition_on_preference = config["condition_on_preference"]
 
     def optimize_design(
-        self,
-        design,
-        q_network,
-        policy_network,
-        old_replay_portion=0,
-        verbose=False,
+        self, design, q_network, policy_network, old_replay_portion=0, verbose=False
     ):
         self._replay.set_mode("start")
         initial_batch = self._replay.random_batch(
