@@ -1,16 +1,16 @@
 from collections import OrderedDict
 
 import numpy as np
+from rlkit.torch.core import np_to_pytorch_batch
 import torch
 import torch.optim as optim
 from torch import nn as nn
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.core.eval_util import create_stats_ordered_dict
-from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
 
-class SACTrainer(TorchTrainer):
+class SACTrainer:
     def __init__(
         self,
         env,
@@ -28,18 +28,13 @@ class SACTrainer(TorchTrainer):
         optimizer_class=optim.Adam,
         soft_target_tau=1e-2,
         target_update_period=1,
-        plotter=None,
-        render_eval_paths=False,
         use_automatic_entropy_tuning=True,
         target_entropy=None,
         alpha=1.0,
         use_gpu=False,
         wandb_instance=None,
-        # weight_pref = torch.tensor([0.5, 0.5]).reshape(2, 1).to("cuda")# np.array([0.5, 0.5]) # MORL weights # update
-        # weight_pref = torch.tensor(weight_pref).reshape(2, 1).to("cuda")
     ):
-        super().__init__()
-        self.wandb_instance = wandb_instance  # for passing values to wandb when wandb is initilized in coadapt class
+        self.wandb_instance = wandb_instance
         self._condition_on_preference = condition_on_preference
         self._use_vector_q = use_vector_q
         self.env = env
@@ -67,9 +62,6 @@ class SACTrainer(TorchTrainer):
 
         self._alpha = alpha
 
-        self.plotter = plotter
-        self.render_eval_paths = render_eval_paths
-
         self.qf_criterion = nn.MSELoss()
 
         self.policy_optimizer = optimizer_class(self.policy.parameters(), lr=policy_lr)
@@ -83,7 +75,9 @@ class SACTrainer(TorchTrainer):
         self._need_to_update_eval_statistics = True
         self._use_gpu = use_gpu
 
-    def train_from_torch(self, batch, scalarize_before_q_loss=False):
+    def train(self, np_batch, scalarize_before_q_loss=False):
+        batch = np_to_pytorch_batch(np_batch)
+
         obs = batch["observations"]
         actions = batch["actions"]
         rewards = batch["rewards"]

@@ -7,18 +7,21 @@ import random
 
 import numpy as np
 import torch
-from utils import add_argparse_arguments
+from utils import add_argparse_arguments, load_config, save_config
 import wandb
 
-import coadapt
+from coadapt import Coadaptation
 from configs import all_configs
 
+
+# Specify options (NOTE: For default values, see `configs` folder)
 ARGS = [
-    ("config-id", "sac_pso_batch"),
+    ("config-id", "sac_pso_batch_halfcheetah"),
+    ("data-folder", True),
     ("run-name", False),
-    ("data-folder", False),
     ("load-replay-buffer", False),
     ("save-replay-buffer", False),
+    ("old-replay-portion", False),
     ("initial-model-dir", False),
     ("weight-preference", False),
     ("condition-on-preference", False),
@@ -31,14 +34,13 @@ ARGS = [
 
 
 def parse_args():
-    # NOTE: For default values, see the specific config files
     parser = argparse.ArgumentParser()
     add_argparse_arguments(parser, ARGS)
 
     return parser.parse_args()
 
 
-def load_config(args):
+def prepare_config(args):
     # Load requested config
     config = all_configs[args.config_id]
 
@@ -52,6 +54,11 @@ def load_config(args):
         if arg_value is not None:
             config[arg_name] = arg_value
 
+    # Assert validity of weight preference
+    assert (
+        sum(config["weight_preference"]) == 1 and min(config["weight_preference"]) >= 0
+    ), "Weight preference must consist of non-negative values, adding up to 1"
+
     # Add experiment ID to config (NOTE: os.urandom is independent of random seeding)
     config["run_id"] = hashlib.md5(os.urandom(128)).hexdigest()[:8]
 
@@ -59,16 +66,12 @@ def load_config(args):
     timestamp = datetime.now().replace(microsecond=0).isoformat().replace(":", "-")
     config["timestamp"] = timestamp
 
-    # Create run folder
-    run_name = config["run_name"]
-    run_folder = os.path.join(config["data_folder"], f"run_{timestamp}_{run_name}")
-    config["run_folder"] = run_folder
-    if not os.path.exists(run_folder):
-        os.makedirs(run_folder)
-
-    # Store config
-    with open(os.path.join(run_folder, "config.json"), "w") as file:
-        file.write(json.dumps(config, indent=2))
+    # Append previous weight preferences
+    if config["initial_model_dir"] is not None:
+        prev_config = load_config(config["initial_model_dir"])
+        prev_pref = prev_config["weight_preference"]
+        prev_id = prev_config["run_id"]
+        config["previous_weight_preferences"].append((prev_pref, prev_id))
 
     # Apply random seeding
     seed = config["random_seed"]
@@ -81,17 +84,23 @@ def load_config(args):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    # Specify run folder and save config
+    run_name = config["run_name"]
+    run_folder = os.path.join(config["data_folder"], f"run_{timestamp}_{run_name}")
+    config["run_folder"] = run_folder
+    save_config(config, run_folder)
+
     if config["verbose"]:
         print("\n=== CONFIG FILE USED FOR EXPERIMENT ===")
-        print(json.dumps(config, sort_keys=True, indent=4))
+        print(json.dumps(config, sort_keys=True, indent=2))
         print("=======================================\n")
 
     return config
 
 
 def launch_experiment(config):
-    co = coadapt.Coadaptation(config)
-    co.run()  # run training loop
+    co = Coadaptation(config)
+    co.run()  # Run training loop
 
     if config["use_wandb"]:
         wandb.finish()
@@ -99,6 +108,6 @@ def launch_experiment(config):
 
 if __name__ == "__main__":
     args = parse_args()
-    config = load_config(args)
+    config = prepare_config(args)
 
     launch_experiment(config)

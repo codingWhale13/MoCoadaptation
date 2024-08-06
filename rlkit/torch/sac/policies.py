@@ -125,11 +125,3 @@ class TanhGaussianPolicy(Mlp):
             pre_tanh_value,
         )
 
-
-class MakeDeterministic(nn.Module):
-    def __init__(self, stochastic_policy):
-        super().__init__()
-        self.stochastic_policy = stochastic_policy
-
-    def get_action(self, observation, pref=None):
-        return self.stochastic_policy.get_action(observation, pref, deterministic=True)

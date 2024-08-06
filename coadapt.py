@@ -2,6 +2,7 @@ import csv
 import os
 import random
 import time
+from typing import Union
 
 import numpy as np
 import torch
@@ -13,8 +14,16 @@ from environments.evoenvsMO import HalfCheetahEnvMO, HopperEnvMO, Walker2dEnvMO
 from RL.replay_mix import MixedEvoReplayLocalGlobalStart
 from RL.soft_actor import SoftActorCritic
 import rlkit.torch.pytorch_util as ptu
-from simple_video import SimpleVideoRecorder
-import utils
+from utils import (
+    DO_CHECKPOINTS,
+    RL_CHECKPOINTS,
+    SimpleVideoRecorder,
+    copy_network,
+    get_cycle_count,
+    move_to_cpu,
+    move_to_cuda,
+    save_csv,
+)
 
 
 def select_env(env_name):
@@ -59,7 +68,7 @@ def select_design_opt_algo(algo_name):
 
 
 class Coadaptation:
-    def __init__(self, config, design_iter_to_load=None):
+    def __init__(self, config, design_iter_to_load: Union[str, int, None] = None):
         self._verbose = config["verbose"]
         self._use_wandb = config["use_wandb"]
         self._run_folder = config["run_folder"]
@@ -78,10 +87,7 @@ class Coadaptation:
         self._cuda_device = config["cuda_device"]
 
         self._weight_pref = np.array(config["weight_preference"])
-
         self._old_replay_portion = config["old_replay_portion"]
-        if not config["load_replay_buffer"]:
-            self._old_replay_portion = 0
 
         # Start wandb experiment
         if self._use_wandb:
@@ -97,31 +103,33 @@ class Coadaptation:
 
         # Set device to GPU or CPU
         if self._use_gpu:
-            utils.move_to_cuda(self._cuda_device)
+            move_to_cuda(self._cuda_device)
         else:
-            utils.move_to_cpu()
+            move_to_cpu()
 
         # Initialize env
         env_cls = select_env(config["env"]["env_name"])
         # energy reward is approximately 1.725 larger than running reward
         if config["env"]["env_name"] == "HalfCheetah":
-            self._env = env_cls(config=config, reward_scaling_energy=0.27532)
+            self.env = env_cls(config=config, reward_scaling_energy=0.27532)
         else:
-            self._env = env_cls(config=config)
+            self.env = env_cls(config=config)
+        self.reward_dim = self.env.reward_dim
+        self.reward_names = self.env.reward_names
 
         # Initialize replay buffer (used by both RL algo and DO algo)
         self._replay = MixedEvoReplayLocalGlobalStart(
-            self._env,
+            self.env,
             max_replay_buffer_size_species=int(1e6),
             max_replay_buffer_size_population=int(1e7),
         )
 
         # Initialize RL algo
         self._rl_algo_class = select_rl_algo(config["rl_method"])
-        self._networks = self._rl_algo_class.create_networks(self._env, config=config)
+        self._networks = self._rl_algo_class.create_networks(self.env, config=config)
         self._rl_algo = self._rl_algo_class(
             config=config,
-            env=self._env,
+            env=self.env,
             replay=self._replay,
             networks=self._networks,
             wandb_instance=wandb.run if self._use_wandb else None,
@@ -130,7 +138,7 @@ class Coadaptation:
 
         # Initialize DO algo
         do_algo_class = select_design_opt_algo(config["design_optim_method"])
-        self._do_algo = do_algo_class(config=config, replay=self._replay, env=self._env)
+        self._do_algo = do_algo_class(config=config, replay=self._replay, env=self.env)
 
         # Initialize counters
         self._last_single_iteration_time = 0
@@ -142,37 +150,29 @@ class Coadaptation:
             self._data_design_type = "Initial"
         else:
             self._data_design_type = "Pre-trained"
-            self.load_checkpoint(
-                self._initial_model_dir,
-                load_replay_buffer=config["load_replay_buffer"],
-                design_iter=design_iter_to_load,
-            )
+            self.load_checkpoint(self._initial_model_dir, design_iter_to_load)
 
-    def load_checkpoint(
-        self,
-        exp_dir,
-        load_replay_buffer=True,
-        design_iter=None,
-    ):
+    def load_checkpoint(self, old_run_dir, design_iter=None):
         # 1. Load design checkpoint
-        num_cycles = utils.get_cycle_count(exp_dir)
-        if design_iter is None:
-            file = f"data_design_{num_cycles}.csv"
+        num_cycles = get_cycle_count(old_run_dir)
+        if design_iter is None or design_iter == "last":
+            design_iter = num_cycles
         else:
+            assert isinstance(design_iter, int), '`design_iter` not int, None or "last"'
             assert design_iter <= num_cycles, f"Design cycle {design_iter} not found"
-            file = f"data_design_{design_iter}.csv"
+        file = f"data_design_{num_cycles}.csv"
 
         rows = []
-        with open(os.path.join(exp_dir, "do_checkpoints", file), newline="") as file:
+        with open(os.path.join(old_run_dir, DO_CHECKPOINTS, file), newline="") as file:
             reader = csv.reader(file)
             for row in reader:
                 rows.append(row)
 
         link_lengths = np.array(rows[1], dtype=float)
-        self._env.set_new_design(link_lengths)
+        self.env.set_new_design(link_lengths)
 
         # 2. Load RL checkpoint
-        rl_dir = os.path.join(exp_dir, "rl_checkpoints")
+        rl_dir = os.path.join(old_run_dir, RL_CHECKPOINTS)
         if design_iter is None:
             file = f"networks_for_design_{num_cycles}.chk"
         else:
@@ -187,11 +187,17 @@ class Coadaptation:
             params = network_data["individual"][key]
             net.load_state_dict(params)
 
-        # 3. Load replay buffer if available
-        replay_path = os.path.join(rl_dir, "latest_replay_buffer_0.chk")
-        if load_replay_buffer and os.path.isfile(replay_path):
-            replay_buffer = torch.load(replay_path)
-            self._replay_old.set_contents(replay_buffer)
+        # 3. Load replay buffer if requried and available
+        if self._old_replay_portion > 0:
+            replay_path = os.path.join(rl_dir, "latest_replay_buffer_0.chk")
+            if os.path.isfile(replay_path):
+                replay_buffer = torch.load(replay_path)
+                self._replay.set_contents(replay_buffer)
+            else:
+                raise ValueError(
+                    f"Can't satisfy `old_replay_portion`={self._old_replay_portion}>0"
+                    "because previous replay buffer could not be loaded"
+                )
 
     def initialize_episode(self):
         """Initializations required before the first episode.
@@ -200,11 +206,11 @@ class Coadaptation:
         executed. Resets variables such as _rewards for logging purposes etc.
         """
         self._rl_algo.episode_init()
-        self._replay_new.reset_species_buffer()
+        self._replay.reset_species_buffer()
 
-        self._states = []
-        self._actions = []
-        self._rewards = []  # Will be a list of tuples in MORL setting
+        self.states = []
+        self.actions = []
+        self.rewards = []  # Will be a list of tuples in MORL setting
         self._episode_counter = 0
 
     def _prepare_single_episode(self):
@@ -217,7 +223,7 @@ class Coadaptation:
         )
 
         if not self._use_gpu:
-            self._policy = utils.copy_network(
+            self._policy = copy_network(
                 network_to=self._policy,
                 network_from=self._policy,
                 cuda_device=self._cuda_device,
@@ -225,7 +231,7 @@ class Coadaptation:
             )
 
         # Reset environment and return initial state
-        state = self._env.reset()
+        state = self.env.reset()
 
         return state
 
@@ -242,8 +248,8 @@ class Coadaptation:
         while not done and step_count < self._episode_length:
             step_count += 1
             pref = self._weight_pref if self._condition_on_preference else None
-            action, _ = self._policy.get_action(state, pref)
-            new_state, reward, done, _ = self._env.step(action)
+            action, _ = self._policy.get_action(state, pref, determinstic=False)
+            new_state, reward, done, _ = self.env.step(action)
 
             if bool(random.getrandbits(1)):
                 # with probability of 50%, modify the weight preference for the population buffer
@@ -273,8 +279,8 @@ class Coadaptation:
         state = self._prepare_single_episode()
 
         ep_states = np.empty((0, state.shape[-1]))
-        ep_actions = np.empty((0, self._env.action_dim))
-        ep_rewards = np.zeros(self._env.reward_dim)
+        ep_actions = np.empty((0, self.env.action_dim))
+        ep_rewards = np.zeros(self.env.reward_dim)
         step_count = 0
         done = False
         while not done and step_count < self._episode_length:
@@ -283,7 +289,7 @@ class Coadaptation:
             pref = self._weight_pref if self._condition_on_preference else None
             action, _ = self._policy.get_action(state, pref, deterministic=True)
 
-            new_state, reward, done, _ = self._env.step(action)
+            new_state, reward, done, _ = self.env.step(action)
 
             ep_states = np.vstack((ep_states, state))
             ep_actions = np.vstack((ep_actions, action))
@@ -291,23 +297,17 @@ class Coadaptation:
 
             state = new_state
 
-        self._rewards.append(ep_rewards)
-        self._states.append(ep_states)
-        self._actions.append(ep_actions)
+        self.rewards.append(ep_rewards)
+        self.states.append(ep_states)
+        self.actions.append(ep_actions)
 
         if self._use_wandb:
-            # save episodic reward
-            # TODO: make more generic
-            if len(ep_rewards) == 2:
-                r1, r2 = ep_rewards
-                wandb.log({"Reward Speed": r1, "Reward Energy": r2})
-            elif len(ep_rewards) == 3:
-                r1, r2, r3 = ep_rewards
-                wandb.log({"Reward Speed": r1, "Reward Jump": r2, "Reward Energy": r3})
+            # Save episodic reward
+            wandb.log({n: ep_rewards[i] for i, n in enumerate(self.reward_names)})
 
     def create_video_of_episode(self, save_dir, filename):
         self.initialize_episode()
-        video_recorder = SimpleVideoRecorder(self._env._env, save_dir, filename)
+        video_recorder = SimpleVideoRecorder(self.env._env, save_dir, filename)
 
         state = self._prepare_single_episode()
 
@@ -317,7 +317,7 @@ class Coadaptation:
             pref = self._weight_pref if self._condition_on_preference else None
             action, _ = self._policy.get_action(state, pref, deterministic=True)
 
-            new_state, _, done, _ = self._env.step(action)
+            new_state, _, done, _ = self.env.step(action)
             video_recorder.step()
 
             state = new_state
@@ -326,35 +326,25 @@ class Coadaptation:
         video_recorder.save_video()
 
     def _save_do_checkpoint(self):
-        """Saves the logged data to the disk as csv files.
+        """Saves the logged data to disk as a CSV file.
 
-        This function creates a log-file in csv format on the disk. For each
-        design an individual log-file is creates in the experiment directory.
-        The first row states if the design was one of the initial designs
-        (as given by the environment), a random design or an optimized design.
-        The second row gives the design parameters (eta). The third (and
-        following rows) contains all subsequent cumulative rewards achieved by
-        the policy throughout the RL process on the current design.
+        Each design is saved as an individual log-file in the DO_CHECKPOINTS folder.
         """
-        current_design = self._env.get_current_design()
-        save_dir = os.path.join(self._run_folder, "do_checkpoints")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        with open(
-            os.path.join(save_dir, f"data_design_{self._design_counter}.csv"), "w"
-        ) as file:
-            cwriter = csv.writer(file)
-            cwriter.writerow(["Design Type:", self._data_design_type])
-            cwriter.writerow(current_design)
-            cwriter.writerow([reward[0] for reward in self._rewards])
-            cwriter.writerow([reward[1] for reward in self._rewards])
+        save_csv(
+            save_dir=os.path.join(self._run_folder, DO_CHECKPOINTS),
+            filename=f"data_design_{self._design_counter}.csv",
+            design_type=self._data_design_type,
+            design_parameters=list(self.env.get_current_design()),
+            rewards={
+                self.reward_names[i]: [reward[i] for reward in self.rewards]
+                for i in range(self.reward_dim)
+            },
+        )
 
     def _save_rl_checkpoint(self):
         """Saves the networks and replay buffer to disk if specified in config."""
-        save_dir = os.path.join(self._run_folder, "rl_checkpoints")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        save_dir = os.path.join(self._run_folder, RL_CHECKPOINTS)
+        os.makedirs(save_dir, exist_ok=True)
 
         if self._save_networks:
             # create new checkpoint for model parameters
@@ -429,9 +419,9 @@ class Coadaptation:
         self._data_design_type = "Initial"
 
         if self._initial_model_dir is None:
-            for params in self._env.init_sim_params:
+            for params in self.env.init_sim_params:
                 self._design_counter += 1
-                self._env.set_new_design(params)
+                self.env.set_new_design(params)
                 self.initialize_episode()
                 self._train_rl_policy(iterations, train_pop=False)
         else:
@@ -453,11 +443,11 @@ class Coadaptation:
         """
         self.initialize_episode()
         # TODO fix the following
-        self._env._env.reset()
+        self.env._env.reset()
 
         self._data_design_type = "Optimized"
 
-        optimized_params = self._env.get_random_design()
+        optimized_params = self.env.get_random_design()
         q_network = self._rl_algo_class.get_q_network(self._networks["population"])
         policy_network = self._rl_algo_class.get_policy_network(
             self._networks["population"]
@@ -475,7 +465,7 @@ class Coadaptation:
 
         for i in range(design_cycles):
             self._design_counter += 1
-            self._env.set_new_design(optimized_params)
+            self.env.set_new_design(optimized_params)
 
             # Reinforcement Learning
             self._train_rl_policy(iterations, train_pop=True)
@@ -499,7 +489,7 @@ class Coadaptation:
                 optimized_params = list(optimized_params)
             else:
                 self._data_design_type = "Random"
-                optimized_params = self._env.get_random_design()
+                optimized_params = self.env.get_random_design()
                 optimized_params = list(optimized_params)
             self.initialize_episode()
 

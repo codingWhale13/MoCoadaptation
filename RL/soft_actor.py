@@ -16,8 +16,8 @@ class SoftActorCritic:
         env,
         replay: MixedEvoReplayLocalGlobalStart,
         networks,
-        wandb_instance,
         use_gpu=False,
+        wandb_instance=None,
     ):
         """Bascally a wrapper class for SAC from rlkit.
 
@@ -28,39 +28,25 @@ class SoftActorCritic:
             networks: dict containing two sub-dicts, 'individual' and 'population'
                 which contain the networks.
         """
-        self._config = config
-        self.file_str = config["run_folder"]
-
         self._env = env
         self._replay = replay
         self._networks = networks
+        self._wandb_instance = wandb_instance
+        self._use_gpu = use_gpu
 
-        if "use_only_global_networks" in config.keys():
-            self._use_only_global_networks = config["use_only_global_networks"]
-        else:
-            self._use_only_global_networks = False
-
-        self._variant_pop = config["rl_algorithm_config"]["algo_params_pop"]
-        self._variant_spec = config["rl_algorithm_config"]["algo_params"]
+        self._use_vector_q = config["use_vector_q"]
+        self._condition_on_preference = config["condition_on_preference"]
+        self._batch_size = config["rl_algorithm_config"]["batch_size"]
+        self._number_pop_updates = config["rl_algorithm_config"]["pop_updates"]
+        self._number_indiv_updates = config["rl_algorithm_config"]["indiv_updates"]
+        self._copy_from_global = config["rl_algorithm_config"]["copy_from_gobal"]
 
         self._ind_qf1 = networks["individual"]["qf1"]
         self._ind_qf2 = networks["individual"]["qf2"]
         self._ind_qf1_target = networks["individual"]["qf1_target"]
         self._ind_qf2_target = networks["individual"]["qf2_target"]
         self._ind_policy = networks["individual"]["policy"]
-
-        self._pop_qf1 = networks["population"]["qf1"]
-        self._pop_qf2 = networks["population"]["qf2"]
-        self._pop_qf1_target = networks["population"]["qf1_target"]
-        self._pop_qf2_target = networks["population"]["qf2_target"]
-        self._pop_policy = networks["population"]["policy"]
-
-        self._batch_size = config["rl_algorithm_config"]["batch_size"]
-        self._nmbr_indiv_updates = config["rl_algorithm_config"]["indiv_updates"]
-        self._nmbr_pop_updates = config["rl_algorithm_config"]["pop_updates"]
-
-        self._wandb_instance = wandb_instance
-        self._use_gpu = use_gpu
+        self._ind_kwargs = config["rl_algorithm_config"]["algo_params"]
 
         self._algorithm_ind = SoftActorCritic_rlkit(
             env=self._env,
@@ -69,27 +55,26 @@ class SoftActorCritic:
             qf2=self._ind_qf2,
             target_qf1=self._ind_qf1_target,
             target_qf2=self._ind_qf2_target,
-            condition_on_preference=config["condition_on_preference"],
-            use_vector_q=config["use_vector_q"],
+            condition_on_preference=self._condition_on_preference,
+            use_vector_q=self._use_vector_q,
             use_automatic_entropy_tuning=False,
             use_gpu=self._use_gpu,
             wandb_instance=self._wandb_instance,
-            **self._variant_spec,
+            **self._ind_kwargs,
         )
-
         self._algorithm_pop = SoftActorCritic_rlkit(
             env=self._env,
-            policy=self._pop_policy,
-            qf1=self._pop_qf1,
-            qf2=self._pop_qf2,
-            target_qf1=self._pop_qf1_target,
-            target_qf2=self._pop_qf2_target,
+            policy=networks["population"]["policy"],
+            qf1=networks["population"]["qf1"],
+            qf2=networks["population"]["qf2"],
+            target_qf1=networks["population"]["qf1_target"],
+            target_qf2=networks["population"]["qf2_target"],
+            condition_on_preference=self._condition_on_preference,
+            use_vector_q=self._use_vector_q,
             use_automatic_entropy_tuning=False,
-            condition_on_preference=config["condition_on_preference"],
-            use_vector_q=config["use_vector_q"],
-            wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
-            **self._variant_pop,
+            wandb_instance=self._wandb_instance,
+            **config["rl_algorithm_config"]["algo_params_pop"],
         )
 
     def episode_init(self):
@@ -105,44 +90,35 @@ class SoftActorCritic:
             qf2=self._ind_qf2,
             target_qf1=self._ind_qf1_target,
             target_qf2=self._ind_qf2_target,
+            condition_on_preference=self._condition_on_preference,
+            use_vector_q=self._use_vector_q,
             use_automatic_entropy_tuning=False,
-            # alt_alpha = self._alt_alpha,
-            condition_on_preference=self._config["condition_on_preference"],
-            use_vector_q=self._config["use_vector_q"],
-            wandb_instance=self._wandb_instance,
             use_gpu=self._use_gpu,
-            **self._variant_spec,
+            wandb_instance=self._wandb_instance,
+            **self._ind_kwargs,
         )
-        if self._config["rl_algorithm_config"]["copy_from_gobal"]:
+        if self._copy_from_global:
             utils.copy_pop_to_ind(
                 networks_pop=self._networks["population"],
                 networks_ind=self._networks["individual"],
             )
-        # We have only to do this because the version of rlkit which we use
-        # creates internally a target network
-        # vf_dict = self._algorithm_pop.target_vf.state_dict()
-        # self._algorithm_ind.target_vf.load_state_dict(vf_dict)
-        # self._algorithm_ind.target_vf.eval()
-        # self._algorithm_ind.to(ptu.device)
 
     def single_train_step(self, old_replay_portion=0, train_ind=True, train_pop=False):
         """A single trianing step.
 
         Args:
-            train_ind: Boolean. If true the individual networks will be trained.
-            train_pop: Boolean. If true the population networks will be trained.
+            train_ind: Boolean. If true, the individual networks will be trained.
+            train_pop: Boolean. If true, the population networks will be trained.
         """
         if train_ind:
-            # Get only samples from the species buffer
             self._replay.set_mode("species")
-            for _ in range(self._nmbr_indiv_updates):
+            for _ in range(self._number_indiv_updates):
                 batch = self._replay.random_batch(self._batch_size, old_replay_portion)
                 self._algorithm_ind.train(batch, scalarize_before_q_loss=False)
 
         if train_pop:
-            # Get only samples from the population buffer
             self._replay.set_mode("population")
-            for _ in range(self._nmbr_pop_updates):
+            for _ in range(self._number_pop_updates):
                 batch = self._replay.random_batch(self._batch_size, old_replay_portion)
                 self._algorithm_pop.train(batch, scalarize_before_q_loss=False)
 
@@ -156,31 +132,16 @@ class SoftActorCritic:
         Args:
             config: A configuration dictonary containing population and
                 individual networks
-
         Returns:
             A dictonary which contains the networks.
         """
-        network_dict = {
+        return {
             "individual": SoftActorCritic._create_networks(env=env, config=config),
             "population": SoftActorCritic._create_networks(env=env, config=config),
         }
-        return network_dict
 
     @staticmethod
     def _create_networks(env, config):
-        """Creates all networks necessary for SAC.
-
-        These networks have to be created before instantiating this class and
-        used in the constructor.
-
-        TODO: Maybe this should be reworked one day...
-
-        Args:
-            config: A configuration dictonary.
-
-        Returns:
-            A dictonary which contains the networks.
-        """
         obs_dim = int(np.prod(env.observation_space.shape))
         action_dim = int(np.prod(env.action_space.shape))
         net_size = config["rl_algorithm_config"]["net_size"]

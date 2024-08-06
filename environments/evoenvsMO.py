@@ -29,8 +29,9 @@ class MOEnvBase:
         #   * self.init_sim_params:         used in intial design loop
         #   * self.observation_space
         #   * self.action_space
-        #   * self.reward_dim
         #   * self.action_dim
+        #   * self.reward_dim
+        #   * self.reward_names
         raise NotImplementedError
 
     def render(self):
@@ -67,10 +68,11 @@ class MOEnvBase:
 
 class HalfCheetahEnvMO(MOEnvBase):
     def __init__(self, config, reward_scaling_energy=1):
+        self._current_design = [1.0] * 6
         self._env = HalfCheetahMoBulletEnv(
             render=config["env"]["render"], design=self._current_design
         )
-        self._reward_scaling_energy = reward_scaling_energy
+        self._env.reset()
 
         self.observation_space = spaces.Box(
             -np.inf,
@@ -81,7 +83,26 @@ class HalfCheetahEnvMO(MOEnvBase):
         self.action_space = self._env.action_space
         self.action_dim = int(np.prod(self.action_space.shape))
         self.reward_dim = self._env.reward_dim
+        self.reward_names = self._env.reward_names
+        self._reward_scaling_energy = reward_scaling_energy
 
+        self.init_sim_params = [
+            [1.0] * 6,
+            [1.41, 0.96, 1.97, 1.73, 1.97, 1.17],
+            [1.52, 1.07, 1.11, 1.97, 1.51, 0.99],
+            [1.08, 1.18, 1.39, 1.76, 1.85, 0.92],
+            [0.85, 1.54, 0.97, 1.38, 1.10, 1.49],
+        ]
+        self.design_params_bounds = [(0.8, 2.0)] * 6
+        self._design_dims = list(
+            range(
+                self.observation_space.shape[0] - len(self._current_design),
+                self.observation_space.shape[0],
+            )
+        )
+        assert len(self._design_dims) == 6
+
+        self._record_video = config["env"]["record_video"]
         if self._record_video:
             if config["video"]["video_save_dir"] is not None:
                 save_dir = config["video"]["video_save_dir"]
@@ -94,25 +115,6 @@ class HalfCheetahEnvMO(MOEnvBase):
                     kwargs[key] = config["video"][key]
 
             self._video_recorder = BestEpisodesVideoRecorder(path=save_dir, **kwargs)
-
-        self.init_sim_params = [
-            [1.0] * 6,
-            [1.41, 0.96, 1.97, 1.73, 1.97, 1.17],
-            [1.52, 1.07, 1.11, 1.97, 1.51, 0.99],
-            [1.08, 1.18, 1.39, 1.76, 1.85, 0.92],
-            [0.85, 1.54, 0.97, 1.38, 1.10, 1.49],
-        ]
-        self._current_design = [1.0] * 6
-        self.design_params_bounds = [(0.8, 2.0)] * 6
-        self._design_dims = list(
-            range(
-                self.observation_space.shape[0] - len(self._current_design),
-                self.observation_space.shape[0],
-            )
-        )
-        assert len(self._design_dims) == 6
-
-        self._env.reset()
 
     def step(self, action):
         info = {}
@@ -136,10 +138,12 @@ class HalfCheetahEnvMO(MOEnvBase):
 
 class Walker2dEnvMO(MOEnvBase):
     def __init__(self, config, reward_scaling_energy=1):
+        self._current_design = [1.0] * 6
         self._env = Walker2dMoBulletEnv(
             render=config["env"]["render"], design=self._current_design
         )
-        self._reward_scaling_energy = reward_scaling_energy
+        self._env.reset()
+
 
         self.observation_space = spaces.Box(
             -np.inf,
@@ -150,7 +154,26 @@ class Walker2dEnvMO(MOEnvBase):
         self.action_space = self._env.action_space
         self.action_dim = int(np.prod(self.action_space.shape))
         self.reward_dim = self._env.reward_dim
+        self.reward_names = self._env.reward_names
+        self._reward_scaling_energy = reward_scaling_energy
 
+        self.init_sim_params = [
+            [1.0] * 6,
+            [0.96, 1.37, 0.64, 1.48, 1.09, 0.69],
+            [1.09, 0.55, 1.17, 0.82, 0.57, 0.86],
+            [0.95, 1.47, 0.89, 1.16, 0.85, 1.33],
+            [0.95, 0.89, 1.03, 1.42, 0.56, 0.64],
+        ]
+        self.design_params_bounds = [(0.5, 1.5)] * 6
+        self._design_dims = list(
+            range(
+                self.observation_space.shape[0] - len(self._current_design),
+                self.observation_space.shape[0],
+            )
+        )
+        assert len(self._design_dims) == 6
+
+        self._record_video = config["env"]["record_video"]
         if self._record_video:
             if config["video"]["video_save_dir"] is not None:
                 save_dir = config["video"]["video_save_dir"]
@@ -164,25 +187,6 @@ class Walker2dEnvMO(MOEnvBase):
 
             self._video_recorder = BestEpisodesVideoRecorder(path=save_dir, **kwargs)
             self._env._param_camera_distance = 4.0
-
-        self.init_sim_params = [
-            [1.0] * 6,
-            [0.96, 1.37, 0.64, 1.48, 1.09, 0.69],
-            [1.09, 0.55, 1.17, 0.82, 0.57, 0.86],
-            [0.95, 1.47, 0.89, 1.16, 0.85, 1.33],
-            [0.95, 0.89, 1.03, 1.42, 0.56, 0.64],
-        ]
-        self._current_design = [1.0] * 6
-        self.design_params_bounds = [(0.5, 1.5)] * 6
-        self._design_dims = list(
-            range(
-                self.observation_space.shape[0] - len(self._current_design),
-                self.observation_space.shape[0],
-            )
-        )
-        assert len(self._design_dims) == 6
-
-        self._env.reset()
 
     def step(self, action):
         info = {}
@@ -206,10 +210,11 @@ class Walker2dEnvMO(MOEnvBase):
 
 class HopperEnvMO(MOEnvBase):
     def __init__(self, config, reward_scaling_energy=1):
+        self._current_design = [1.0] * 5
         self._env = HopperMoBulletEnv(
             render=config["env"]["render"], design=self._current_design
         )
-        self._reward_scaling_energy = reward_scaling_energy
+        self._env.reset()
 
         self.observation_space = spaces.Box(
             -np.inf,
@@ -220,7 +225,26 @@ class HopperEnvMO(MOEnvBase):
         self.action_space = self._env.action_space
         self.action_dim = int(np.prod(self.action_space.shape))
         self.reward_dim = self._env.reward_dim
+        self.reward_names = self._env.reward_names
+        self._reward_scaling_energy = reward_scaling_energy
 
+        self.init_sim_params = [
+            [1.0] * 5,
+            [2.17, 0.99, 1.44, 1.90, 0.59],
+            [2.24, 0.78, 1.66, 0.76, 1.15],
+            [2.10, 1.67, 1.42, 1.50, 1.78],
+            [3.93, 0.68, 1.17, 0.85, 1.76],
+        ]
+        self.design_params_bounds = [(0.5, 4.0)] + [(0.5, 2.0)] * 4
+        self._design_dims = list(
+            range(
+                self.observation_space.shape[0] - len(self._current_design),
+                self.observation_space.shape[0],
+            )
+        )
+        assert len(self._design_dims) == 5
+
+        self._record_video = config["env"]["record_video"]
         if self._record_video:
             if config["video"]["video_save_dir"] is not None:
                 save_dir = config["video"]["video_save_dir"]
@@ -234,25 +258,6 @@ class HopperEnvMO(MOEnvBase):
 
             self._video_recorder = BestEpisodesVideoRecorder(path=save_dir, **kwargs)
             self._env._param_camera_distance = 4.0
-
-        self.init_sim_params = [
-            [1.0] * 5,
-            [2.17, 0.99, 1.44, 1.90, 0.59],
-            [2.24, 0.78, 1.66, 0.76, 1.15],
-            [2.10, 1.67, 1.42, 1.50, 1.78],
-            [3.93, 0.68, 1.17, 0.85, 1.76],
-        ]
-        self._current_design = [1.0] * 5
-        self.design_params_bounds = [(0.5, 4.0)] + [(0.5, 2.0)] * 4
-        self._design_dims = list(
-            range(
-                self.observation_space.shape[0] - len(self._current_design),
-                self.observation_space.shape[0],
-            )
-        )
-        assert len(self._design_dims) == 5
-
-        self._env.reset()
 
     def step(self, action):
         info = {}

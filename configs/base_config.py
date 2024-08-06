@@ -3,7 +3,7 @@
 # Exceptions, when overwriting parameters programmatically (i.e. from a Python file) is fine, are the following:
 #
 # * data_folder (e.g. using subfolders for more clear structure)
-# * load_replay_buffer, initial_model_dir, old_replay_portion (allows loading different starting points)
+# * initial_model_dir, old_replay_portion (allows loading different starting points)
 # * save_replay_buffer (replay buffer is useful for steering later on, but it can also be quite large)
 # * run_name (to identify the experiment in a human-friendly way)
 # * random_seed (to allow running the same experiment with different random seeds)
@@ -25,8 +25,7 @@ base_config = {
     "use_wandb": True,  # Use True to log the run with wandb ("weights and biases")
     # LOADING/SAVING OPTIONS
     "data_folder": "experiments",  # Path to parent folder of experiment run (see run_folder)
-    "load_replay_buffer": True,  # Use True to load replay buffer (if available in initial_model_dir)
-    "initial_model_dir": None,  # If specified and load_replay_buffer=True, loads the latest checkpoint from this experiment folder at the beginning of training"
+    "initial_model_dir": None,  # If specified, loads the latest checkpoint from this experiment folder at the beginning of training"
     "save_networks": True,  # Use True to save checkpoints (RL network and design specification) for each design
     "save_replay_buffer": False,  # Use True to save the most recent RL replay buffer (can be a few GB large)
     # GPU OPTIONS
@@ -49,7 +48,8 @@ base_config = {
         0.5,
         0.5,
     ),  # Objective preference in MORL setting (one non-negative value per objective, should add up to 1)
-    "old_replay_portion": 0,  # Value between 0 and 1, specifying how much experience should be sampled from the old replay buffer (if load_replay_buffer=False, will be overwritten with 0)
+    "old_replay_portion": 0,  # Value between 0 and 1, specifying how much experience should be sampled from the old replay buffer (if no previous replay buffer can be loaded, will be overwritten with 0)
+    "previous_weight_preferences": [],  # List of previously trained weight preferences (if any), each entry has format [previous weight_preference, previous run_id], filled automatically
     # DESIGN OPTIMIZATION (DO) PARAMETERS
     "design_optim_method": "pso_batch",  # Which design optimization method to use
     "state_batch_size": 32,  # Size of the batch used during the design optimization process to estimate fitness of design

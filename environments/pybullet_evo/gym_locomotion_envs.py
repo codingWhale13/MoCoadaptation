@@ -243,36 +243,6 @@ class WalkerBaseBulletEnv(MJCFBaseBulletEnv):
         self.robot.reset_design(self._p, design)
 
 
-class HalfCheetahBulletEnv(WalkerBaseBulletEnv):
-    def __init__(self, render=False, design=None):
-        self.robot = HalfCheetah(design)
-        WalkerBaseBulletEnv.__init__(self, self.robot, render)
-        self.observation_space = spaces.Box(
-            -np.inf, np.inf, shape=[17], dtype=np.float32
-        )
-
-    def _isDone(self):
-        return False
-
-    def step(self, a):
-        if (
-            not self.scene.multiplayer
-        ):  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
-            self.robot.apply_action(a)
-            self.scene.global_step()
-
-        state = self.robot.calc_state()  # also calculates self.joints_at_limit
-
-        done = self._isDone()
-        if not np.isfinite(state).all():
-            print("~INF~", state)
-            done = 0
-        reward = max(state[-5] / 10.0, 0.0)
-
-        return state, reward, bool(done), {}
-
-
-# Needed for multiobjective class of halfcheetah
 class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
     def __init__(self, render=False, design=None):
         self.robot = HalfCheetah(design)
@@ -281,6 +251,7 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
         self.reward_dim = 2
+        self.reward_names = ["Reward Speed", "Reward Energy"]
 
     def _isDone(self):
         return False
@@ -299,15 +270,15 @@ class HalfCheetahMoBulletEnv(WalkerBaseBulletEnv):
             print("~INF~", state)
             done = 0
 
-        reward_run = max(state[-5] / 10.0, 0.0)
+        reward_speed = max(state[-5] / 10.0, 0.0)
         reward_energy = 4 - 1 * np.square(a).sum()
 
         return (
             state,
-            np.array([reward_run, reward_energy]),
+            np.array([reward_speed, reward_energy]),
             bool(done),
-            {"obj": np.array([reward_run, reward_energy])},
-        )  # to numpy array instead of dict #return state, {'obj': np.array([reward_run, reward_energy])}, bool(done), {}
+            {"obj": np.array([reward_speed, reward_energy])},
+        )  # to numpy array instead of dict #return state, {'obj': np.array([reward_speed, reward_energy])}, bool(done), {}
 
 
 class Walker2dMoBulletEnv(WalkerBaseBulletEnv):
@@ -318,6 +289,7 @@ class Walker2dMoBulletEnv(WalkerBaseBulletEnv):
             -np.inf, np.inf, shape=[17], dtype=np.float32
         )
         self.reward_dim = 2
+        self.reward_names = ["Reward Speed", "Reward Energy"]
 
     def _isDone(self):
         return False
@@ -342,14 +314,14 @@ class Walker2dMoBulletEnv(WalkerBaseBulletEnv):
         upright = -np.linalg.norm(pitch_body) * 0.1
         reached_min_height = max(float(height > 0.8), 0.1)
 
-        reward_run = (reached_min_height * (x_speed + 1) + upright) / 10.0
+        reward_speed = (reached_min_height * (x_speed + 1) + upright) / 10.0
         reward_energy = 4 - 1 * np.square(a).sum()
 
         return (
             state,
-            np.array([reward_run, reward_energy]),
+            np.array([reward_speed, reward_energy]),
             bool(done),
-            {"obj": np.array([reward_run, reward_energy])},
+            {"obj": np.array([reward_speed, reward_energy])},
         )
 
 
@@ -361,6 +333,7 @@ class HopperMoBulletEnv(WalkerBaseBulletEnv):
             -np.inf, np.inf, shape=[8 + 5], dtype=np.float32
         )
         self.reward_dim = 3
+        self.reward_names = ["Reward Speed", "Reward Jump", "Reward Energy"]
 
     def _isDone(self):
         return False
@@ -391,13 +364,13 @@ class HopperMoBulletEnv(WalkerBaseBulletEnv):
         upright = -np.linalg.norm(pitch_body) * 0.1
         reached_min_height = max(float(height > 0.8), 0.1)
 
-        reward_run = (reached_min_height * (x_speed + 1) + upright) / 10.0
+        reward_speed = (reached_min_height * (x_speed + 1) + upright) / 10.0
         reward_jump = 12.0 * (height - self.initial_height)
         reward_energy = 4.0 - 1.0 * np.square(a).sum()
 
         return (
             state,
-            np.array([reward_run, reward_jump, reward_energy]),
+            np.array([reward_speed, reward_jump, reward_energy]),
             bool(done),
-            {"obj": np.array([reward_run, reward_jump, reward_energy])},
+            {"obj": np.array([reward_speed, reward_jump, reward_energy])},
         )
