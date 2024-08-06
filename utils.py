@@ -1,3 +1,4 @@
+import argparse
 import csv
 import cv2
 import os
@@ -6,8 +7,12 @@ import time
 
 import json
 import numpy as np
+import pybullet as p
 
 import rlkit.torch.pytorch_util as ptu
+
+
+# ========== PYTORCH HELPERS ==========
 
 
 def move_to_cpu():
@@ -64,6 +69,9 @@ def copy_network(network_to, network_from, cuda_device=None, force_cpu=False):
     return network_to
 
 
+# ========== VIDEO RECORDING ==========
+
+
 class BestEpisodesVideoRecorder:
     def __init__(self, path=None, max_videos=1, record_evy_n_episodes=5):
         self._vid_path = "/tmp/videos" if path is None else path
@@ -90,7 +98,7 @@ class BestEpisodesVideoRecorder:
         # self._episodic_rewards = [-float('inf')] * self._keep_n_best # ORIG
         self._episodic_rewards = np.full(
             self._keep_n_best, -np.inf
-        )  # need for numpy array since rewards has two parts and it is numpy array
+        )  # Need for numpy array since rewards has two parts and it is numpy array
         self._episodic_reset()
 
     def increase_folder_counter(self):
@@ -167,15 +175,13 @@ class BestEpisodesVideoRecorder:
                 )
 
     def reset(self, env, state, reward, done, verbose=False):
-        # final processing of data from previous episode
+        # Final processing of data from previous episode
         if self._episode_counter % self._record_evy_n_episodes == 0:
             env.camera_adjust()
             self._vid_writer.release()
+            os.makedirs(self._current_vid_path, exist_ok=True)
 
-            if not os.path.exists(self._current_vid_path):
-                os.makedirs(self._current_vid_path)
-
-            # if self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward: # ORIG
+            # If self._did_at_least_one_step and min(self._episodic_rewards) < self._current_episode_reward: # ORIG
             if self._did_at_least_one_step and np.min(self._episodic_rewards) < np.min(
                 self._current_episode_reward
             ):  # ('comparison')).any(): # changed for MORL comparison for two rewards
@@ -187,7 +193,7 @@ class BestEpisodesVideoRecorder:
 
         self._episode_counter += 1
         self._episodic_reset()
-        # set up everything for this episode if we record
+        # Set up everything for this episode if we record
         if self._episode_counter % self._record_evy_n_episodes == 0:
             self._create_vid_stream()
             frame = env.render_camera_image((self._frame_width, self._frame_height))
@@ -201,8 +207,7 @@ class BestEpisodesVideoRecorder:
             self._step_counter = 1
 
     def _create_vid_stream(self):
-        if not os.path.exists(self._current_vid_path):
-            os.makedirs(self._current_vid_path)
+        os.makedirs(self._current_vid_path, exist_ok=True)
         self._vid_writer = cv2.VideoWriter(
             os.path.join(self._current_vid_path, "current_video.avi"),
             cv2.VideoWriter_fourcc("M", "J", "P", "G"),
@@ -211,27 +216,79 @@ class BestEpisodesVideoRecorder:
         )
 
 
-def get_config(run_dir, filename="config.json"):
-    with open(os.path.join(run_dir, filename)) as file:
+class SimpleVideoRecorder:
+    def __init__(self, env, save_dir="", file_name="single_episode"):
+        self._env = env
+        self._frame_width = 200
+        self._frame_height = 200
+
+        os.makedirs(save_dir, exist_ok=True)
+        self._vid_writer = cv2.VideoWriter(
+            os.path.join(save_dir, f"{file_name}.mp4"),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            30,
+            (self._frame_width, self._frame_height),
+        )
+
+        frame = env.render_camera_image((self._frame_width, self._frame_height))
+        frame = (frame * 255).astype(np.uint8)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        self._vid_writer.write(frame)
+
+        # Connect to PyBullet server (for some reason important when recording videos with only a few frames)
+        if p.isConnected() == 0:
+            p.connect(p.GUI)
+
+    def step(self):
+        self._env.camera_adjust()
+        frame = self._env.render_camera_image((self._frame_width, self._frame_height))
+        frame = frame * 255
+        frame = frame.astype(np.uint8)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        self._vid_writer.write(frame)
+
+    def save_video(self):
+        self._env.camera_adjust()
+        self._vid_writer.release()
+
+
+# ========== FILE AND FOLDER HANDLING ==========
+
+# Constant names to avoid confusion due to typos
+CONFIG = "config.json"  # Used for training
+ORIGINAL_CONFIG = "original_config.json"  # Used for testing
+DO_CHECKPOINTS = "do_checkpoints"  # Folder in run_dir
+RL_CHECKPOINTS = "rl_checkpoints"  # Folder in run_dir
+DESIGN_TYPE = "Design Type"  # Used in CSV file
+DESIGN_PARAMETERS = "Design Parameters"  # Used in CSV file
+
+
+def load_config(load_dir, filename=CONFIG):
+    with open(os.path.join(load_dir, filename)) as file:
         config = json.load(file)
+
+    # Backward compatibility: Add fields if they don't exists
+    if "previous_weight_preferences" not in config:
+        config["previous_weight_preferences"] = []
+    if "old_replay_portion" not in config:
+        config["old_replay_portion"] = 0
 
     return config
 
 
-def get_run_name(run_dir):
-    with open(os.path.join(run_dir, "config.json")) as file:
-        config = json.load(file)
-
-    return config["run_name"]
+def save_config(config: dict, save_dir, filename=CONFIG):
+    os.makedirs(save_dir, exist_ok=True)
+    with open(os.path.join(save_dir, filename), "w") as file:
+        file.write(json.dumps(config, indent=2))
 
 
 def exp_dir_to_run_dirs(exp_dir):
     run_dirs = []
     for dirpath, dirnames, filenames in os.walk(exp_dir):
         if (
-            "config.json" in filenames
-            and "do_checkpoints" in dirnames
-            and "rl_checkpoints" in dirnames
+            CONFIG in filenames
+            and DO_CHECKPOINTS in dirnames
+            and RL_CHECKPOINTS in dirnames
         ):  # Make sure experiment did not immediately crash
             run_dirs.append(dirpath)
 
@@ -239,8 +296,8 @@ def exp_dir_to_run_dirs(exp_dir):
 
 
 def get_cycle_count(run_dir):
-    do_dir = os.path.join(run_dir, "do_checkpoints")
-    rl_dir = os.path.join(run_dir, "rl_checkpoints")
+    do_dir = os.path.join(run_dir, DO_CHECKPOINTS)
+    rl_dir = os.path.join(run_dir, RL_CHECKPOINTS)
 
     # Strip last four characters to get rid of filename ending (.csv or .chk)
     do_cycle_count = max(map(lambda x: int(x.split("_")[-1][:-4]), os.listdir(do_dir)))
@@ -250,23 +307,109 @@ def get_cycle_count(run_dir):
     return do_cycle_count
 
 
-def read_csv(filepath) -> list:
-    """Returns a list of values read from CSV file per row"""
+def load_csv(filepath) -> dict:
+    """Read a CSV file and return a dictionary containing design and rewards.
 
-    rows = []
+    The new CSV format is consistent across files in the `do_checkpoins` folder as well as test results during evaluation:
+    1. First row contains two strings:                  DESIGN_TYPE, {design type, e.g. "Optimized"}
+    2. Second row contains one string and some floats:  DESIGN_PARAMETERS, {value}, {value}, ...
+    3. Third row contains one string and some floats:   {name of first reward dimension, e.g. "Reward Speed"}, {value}, {value}, ...
+    4. Fourth row contains one string and some floats:  {name of second reward dimension, e.g. "Reward Energy"}, {value}, {value}, ...
+    5. ... (more reward dimensions)
+
+    However, this function can also handle CSV files in previous format, accounting for:
+    * Implicit reward names for HalfCheetah and
+    * Test results missing row with design type information
+
+    Returns dictionary of format:
+    {
+        DESIGN_TYPE: {some string}
+        DESIGN_PARAMETERS: {list of design parameters (e.g. limb lengths)}
+        {reward name 1}: {list of episodic rewards}
+        {reward name 2}: {list of episodic rewards}
+        ...
+    }
+    """
+
+    values = {}
     with open(filepath, "r", newline="") as file:
         reader = csv.reader(file)
-        for row in reader:
-            rows.append(row)
+        rows = list(reader)
 
-    return rows
+        if rows[0][0].startswith(DESIGN_TYPE):  # Watching out for "Design Type:"
+            values[DESIGN_TYPE] = rows[0][1]
+            values[DESIGN_PARAMETERS] = rows[0][1]
+            if rows[1][0] == DESIGN_PARAMETERS:
+                # Format is up-to-date, reward names will be explicit
+                values[DESIGN_PARAMETERS] = np.array(rows[1][1:], dtype=float)
+                for row_idx in range(2, len(rows)):
+                    row = rows[row_idx]
+                    row_name = row[0]
+                    row_data = np.array(row[1:], dtype=float)  # Reward values
+                    values[row_name] = row_data
+            else:
+                values[DESIGN_PARAMETERS] = np.array(rows[1], dtype=float)
+                values["Reward Speed"] = np.array(rows[2], dtype=float)
+                values["Reward Energy"] = np.array(rows[3], dtype=float)
+        else:
+            # Old format for test results: 3 rows of floats, no description at all
+            values[DESIGN_TYPE] = "Unknown"
+            values[DESIGN_PARAMETERS] = np.array(rows[0], dtype=float)
+            values["Reward Speed"] = np.array(rows[1], dtype=float)
+            values["Reward Energy"] = np.array(rows[2], dtype=float)
+
+    return values
 
 
-def preftostr(pref: list[float]) -> str:
+def save_csv(
+    save_dir: str,
+    filename: str,
+    design_type: str,
+    design_parameters: list[float],
+    rewards: dict[str, list[float]],
+):
+    """Saves design and rewards (logged during training or testing) as CSV.
+
+    The first row states if the design was one of the initial designs
+    (as given by the environment), a random design or an optimized design.
+    The second row gives the design parameters. The third (and
+    following rows) contains all subsequent cumulative rewards achieved by
+    the policy throughout the RL process on the current design.
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    with open(os.path.join(save_dir, filename), "w") as file:
+        cwriter = csv.writer(file)
+        cwriter.writerow([DESIGN_TYPE, design_type])
+        cwriter.writerow([DESIGN_PARAMETERS] + list(design_parameters))
+        for reward_name, rewards in rewards.items():
+            cwriter.writerow([reward_name] + list(rewards))
+
+
+def get_reward_names_from_csv(filepath) -> list[str]:
+    """Get reward names in the same order as in the CSV (and thus in the env definition)"""
+    assert filepath.endswith(".csv"), f"Expected CSV file, but got '{filepath}'"
+    with open(filepath, "r", newline="") as file:
+        reader = csv.reader(file)
+        rows = list(reader)
+        if rows[0][0] == DESIGN_TYPE and rows[1][0] == DESIGN_PARAMETERS:
+            # Format is up-to-date, reward names will be explicit
+            reward_names = []
+            for row_idx in range(2, len(rows)):
+                reward_names.append(rows[row_idx][0])
+            return reward_names
+    return ["Reward Speed", "Reward Energy"]  # Support legacy CSV files
+
+
+def filenamify(s):
+    """Turn a string into a lowercase fileanme without spaces"""
+    return s.lower().replace(" ", "_")
+
+
+def pref2str(pref: list[float]) -> str:
     return "-".join(map(str, pref))
 
 
-def strtobool(val: str) -> bool:
+def str2bool(val: str) -> bool:
     """
     Convert a string representation of truth to True or False.
 
@@ -281,6 +424,15 @@ def strtobool(val: str) -> bool:
         return False
     else:
         raise ValueError(f"Invalid truth value '{val}'")
+
+
+def int_or_last(value):
+    if value == "last":
+        return value
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'{value} is not a valid integer or "last"')
 
 
 def add_argparse_arguments(parser, arguments):
@@ -303,7 +455,7 @@ def add_argparse_arguments(parser, arguments):
         },
         "run-dir": {
             "type": str,
-            "help": "Path to individual run folders (containing a config.json file), equivalent to data-folder",
+            "help": "Path to individual run folder (containing a config.json file)",
         },
         "run-dirs": {
             "type": str,
@@ -323,32 +475,28 @@ def add_argparse_arguments(parser, arguments):
             "help": "Number of iterations",
         },
         "use-gpu": {
-            "type": strtobool,
+            "type": str2bool,
             "help": "Use True for running the code on GPU, use False for CPU",
         },
         "save-dir": {
             "type": str,
             "help": "Output folder to save results",
         },
-        "verbose": {
-            "type": strtobool,
-            "help": "Use True for more verbose console output",
-        },
-        "file-name": {
-            "type": str,
-            "help": 'File name (without file ending), e.g. "my_file"',
-        },
         "design-cycle": {
-            # "type": str or int,
-            "help": 'Specified the design cycle of interest as an integer (or "last")',
+            "type": int_or_last,
+            "help": 'Specifies design cycle of interest as an integer (or "last")',
+        },
+        "verbose": {
+            "type": str2bool,
+            "help": "Use True for more verbose console output",
         },
         # TRAINING ARGUMENTS
         "config-id": {
             "type": str,
             "help": "Name of config file, to specify which config to load",
             "choices": (
-                "sac_pso_batch",
-                "sac_pso_sim",
+                "sac_pso_batch_halfcheetah",
+                "sac_pso_sim_halfcheetah",
                 "sac_pso_batch_vec",
                 "sac_pso_batch_walker2d",
                 "sac_pso_batch_hopper",
@@ -362,17 +510,21 @@ def add_argparse_arguments(parser, arguments):
             "type": str,
             "help": "Human-readable name of the experiment, part of experiment folder name and used as wandb run name",
         },
-        "load-replay-buffer": {
-            "type": strtobool,
-            "help": "Use True to load the most recent RL replay buffer (can be a few GB large)",
-        },
-        "save-replay-buffer": {
-            "type": strtobool,
-            "help": "Use True to save the most recent RL replay buffer (can be a few GB large)",
-        },
         "initial-model-dir": {
             "type": str,
             "help": "If specified, the latest checkpoint from this experiment is loaded at the beginning of training",
+        },
+        "load-replay-buffer": {
+            "type": str2bool,
+            "help": "Use True to load the most recent RL replay buffer (can be a few GB large, only takes effect if --initial-model-dir is specified)",
+        },
+        "old-replay-portion": {
+            "type": float,
+            "help": "Value between 0 and 1, specifying fraction of samples from old replay buffer (only takes effect with --load-replay-buffer set to True)",
+        },
+        "save-replay-buffer": {
+            "type": str2bool,
+            "help": "Use True to save the most recent RL replay buffer (can be a few GB large)",
         },
         "weight-preference": {
             "type": float,
@@ -380,21 +532,29 @@ def add_argparse_arguments(parser, arguments):
             "nargs": "+",
         },
         "condition-on-preference": {
-            "type": strtobool,
+            "type": str2bool,
             "help": "Use True to condition policy and Q-networks on the preference",
         },
         "use-vector-q": {
-            "type": strtobool,
+            "type": str2bool,
             "help": "Use True for vector output of Q-network, use False for scalar Q-values",
         },
         "use-wandb": {
-            "type": strtobool,
-            "help": 'Use True to log the run with wandb ("weights and biases")',
+            "type": str2bool,
+            "help": 'Use True to log the run with wandb ("Weights and Biases")',
         },
         # EVALUATION AND PLOTTING ARGUMENTS
+        "skip-initial-designs": {
+            "type": str2bool,
+            "help": "Use True to skip testing on initial designs",
+        },
+        "skip-random-designs": {
+            "type": str2bool,
+            "help": "Use True to skip testing on random designs",
+        },
         "test-results-dir": {
             "type": str,
-            "help": "Path to folder with test results (each subfolder should contain 1+ CSV files and an original_config.json)",
+            "help": "Path to folder with test results (each subfolder should contain 1+ CSV files and `original_config.json`)",
         },
         "direct-test-dir": {
             "type": str,
@@ -402,28 +562,21 @@ def add_argparse_arguments(parser, arguments):
         },
         "steered-test-dirs": {
             "type": str,
-            "help": "One or more paths to folders with test results of steered algo",
+            "help": "One or more paths to folders with test results of steered agent",
             "nargs": "+",
-        },
-        "skip-initial-designs": {
-            "type": strtobool,
-            "help": "Use True to skip testing on initial designs",
-        },
-        "skip-random-designs": {
-            "type": strtobool,
-            "help": "Use True to skip testing on random designs",
-        },
-        "marker-size": {
-            "type": int,
-            "help": "Size of markers used in plots",
-        },
-        "use-shared-plot": {
-            "type": strtobool,
-            "help": "Use True to plot everything in one plot, use False to create separate plots",
         },
         "common-name": {
             "type": str,
-            "help": "Human-readable name, e.g. for comparing across multiple preferences",
+            "help": "Human-readable name for comparing across multiple experiment runs, will be included e.g. in plot title and file name",
+        },
+        "marker-size": {
+            "type": int,
+            "help": "Size of markers used for plotting",
+        },
+        "video-dirs": {
+            "type": str,
+            "help": "One or more paths to folders containing videos of single runs, generated by `video(s)_from_checkpoint.py`",
+            "nargs": "+",
         },
     }
 
@@ -440,53 +593,3 @@ def add_argparse_arguments(parser, arguments):
                 else {"default": req_def}
             ),
         )
-
-
-"""
-TODO (if actually needed): upgrade config from old version ("0") to proper version 1
-def upgrade_config(config):
-    if "config_version" in config and config["config_version"] == 1:
-        return config  # nothing to do, already up to date
-
-    config = deepcopy(config)
-
-    config["config_version"] = 1  # upgrading to config version 1
-    config["config_name"] = config["name"]
-
-    config["random_seed"] = None
-    config["timestamp"] = None
-    config["run_id"] = None
-    config["run_name"] = None
-    config["initial_model_dir"] = None
-    # TODO: explicitly store information in config, something like this:
-    if "data_folder_experiment" in config:
-        folder_name = config["data_folder_experiment"].split("/")[-1]
-        config["random_seed"] = int(folder_name.split("_")[-1])
-        config["timestamp"] = " ".join(folder_name.split("__")[0:2]).replace("_", " ")
-        config["run_id"] = folder_name.split("__")[2].split("[")[0]
-        config["run_name"] = config["data_folder_experiment"].split("/")[-2]
-        config["weight_preference"] = (0.7, 0.3)
-
-    config["run_folder"] = config["data_folder_experiment"]
-    config["save_replay_buffer"] = False  # this was not in option in the original repos
-
-    # create key->None entries for other newly introduced parameters
-    config["video"] = dict()
-    config["video"]["video_save_dir"] = None
-    config["video"]["record_evy_n_episodes"] = None
-
-    # remove old keys
-    for key in [
-        "data_folder_experiment",
-        "use_cpu_for_rollout",
-        "nmbr_random_designs",
-        "iterations_random",
-        "weights",
-        "name",
-        "load_model",
-    ]:
-        if key in config:
-            del config[key]
-
-    return config
-"""
