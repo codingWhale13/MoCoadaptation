@@ -30,7 +30,7 @@ def parse_args():
             ("skip-random-designs", "true"),
             ("n-tests", 1),  # Number of test runs per experiment
             ("n-iters", 30),  # Number of iterations per test
-            ("save-dir", "test_data/per_iteration"),
+            ("save-dir", "../test_data/per_iteration"),
         ],
     )
 

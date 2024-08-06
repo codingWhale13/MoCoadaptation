@@ -82,7 +82,13 @@ To compare this with the code structure in this repository: The functionality fr
     1. One replay buffer with the old replay data, loaded from a previous checkpoint and
     2. A fresh replay buffer that will be populated with new experience.
 - The `old_replay_portion` option handles how much percentage of samples are from the old / new replay buffer. At the moment, this is a constant for one experiment, but extending it to follow some schedule should be straightforward.
-- The replay buffer (meaning only one of the two [`EvoReplayLocalGlobalStart`](RL/replay_evo.py)s, populated with new experience) can be saved to disk. Because of its size (~10GB), only the latest replay buffer is stored, separately of the model checkpoints as an individual file.
+    - NOTE: There's currently a problem with this:
+        - While `old_replay_portion=0` works just as expected, 
+        - Setting `old_replay_portion=1` leads to never making use of new experiences. This is consistent with the naming, but quite useless. The experiments in the `2024-07-11_with-replay` folder have been created before introducing this option, where we load the entire replay buffer (so "old replay = 1" in the beginning) but then gradually increase the proportion of new experiences. This is due to the size limitation of the replay buffer: New samples get added to the population buffer until full (size: 10M), after that the new samples push out the old ones. The baseline experiments take up 7M samples.
+        - `old_replay_portion=0.7` (the "mix" experiment for which the double-replay-buffer was introduced) works as expected. However, it is questionable how useful this approach is since we heavily overrepresent fresh samples in the beginning (they take up 30% of the samples during training even though most experience is still with the old preference) and underrepresent them (keeping on sampling 70% old experience, no matter how much changed).
+        - Take-away: the size limitation provides a "natural schedule" to rejuvenate the replay buffer over time. With the double replay buffer (and a not-yet implemented schedule), there's more control. However, without the schedule, even replication of the simple "load_replay_buffer: true" setting is not possible.
+        - Quick fix for replicating "load_replay_buffer: true" setting: use the option `which=new` when loading the replay buffer and set `old_replay_portion=0`
+- The replay buffer (meaning only the new [`EvoReplayLocalGlobalStart`](RL/replay_evo.py), populated with new experience) can be saved to disk. Because of its size (~10GB), only the latest replay buffer is stored, separately of the model checkpoints as an individual file.
 
 ## Config Arguments
 

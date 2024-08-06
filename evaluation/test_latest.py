@@ -24,7 +24,7 @@ def parse_args():
             ("run-dirs", False),  # Option for more control
             ("n-tests", 5),  # Number of test runs per final model
             ("n-iters", 30),  # Number of iterations per test
-            ("save-dir", "test_data/latest"),
+            ("save-dir", "../test_data/latest"),
         ],
     )
 
