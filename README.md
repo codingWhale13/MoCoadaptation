@@ -145,7 +145,9 @@ To see all parameter options, see the [config arguments](#config-arguments) sect
 Creating videos from checkpoints can be done with `videos_from_checkpoint.py`. This is also a necessary step for both
 
 -   Showing the policy behavior in the GUI
--   Using `videos_grid.py` to stack videos of different runs and design cycles into one larger video. Example, with 30%, 60%, 90% running from top to bottom, see [![here]](media/video_grid_example.mp4)
+-   Using `videos_grid.py` to stack videos of different runs and design cycles into one larger video. Example, with 30%, 60%, 90% running from top to bottom:
+
+![Video grid example](media/video_grid_example_seconds_20_to_30.gif)
 
 #### Plotting
 
@@ -199,7 +201,7 @@ The GUI requires the following data:
 -   Test data in `evaluation/test_data`, needs to contain at least one experiment folder which in turn contains run folders.
 -   Videos in `evaluation/assets/videos` with file names `{RUN_ID}_last.mp4` where "last" means this video shows the last design cycle that was trained.
 
-Both test data and videos for the three [](#experiments) can be found [here](https://drive.google.com/drive/folders/1nRF2ejb68xVYoQkMvve0isuXSGi6Xosj?usp=drive_link).
+Both test data and videos for the three [experiments](#experiments) can be found [here](https://drive.google.com/drive/folders/1nRF2ejb68xVYoQkMvve0isuXSGi6Xosj?usp=drive_link).
 
 ## Code Structure
 
