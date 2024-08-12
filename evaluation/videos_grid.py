@@ -31,7 +31,7 @@ def add_text_to_video(input_file, output_file, text):
         .drawtext(
             text=text,
             fontfile="fonts/dejavu-sans-bold.ttf",
-            fontsize=16,
+            fontsize=10,
             fontcolor="black",
             x="(w-text_w)/2",
             y=10,
@@ -43,54 +43,60 @@ def add_text_to_video(input_file, output_file, text):
     )
 
 
-def concatenate_videos_horizontally(video_files, output_file):
+def stack_videos_horizontally(video_files, output_file):
     # Concatenate videos horizontally
     inputs = [ffmpeg.input(video) for video in video_files]
-    print("\n\n\n\n\n\n\n\n\n\n\n\nHSTACK", inputs)
-    ffmpeg.filter(
-        inputs,
-        "hstack",
-        inputs=4,
-    ).output(
+    ffmpeg.filter(inputs, "hstack", inputs=len(inputs)).output(
         output_file,
-        vcodec='libx264',       # Set video codec
-        pix_fmt='yuv420p',      # Set pixel format
+        vcodec="libx264",  # Set video codec
+        pix_fmt="yuv420p",  # Set pixel format
     ).run(overwrite_output=True)
 
 
-def concatenate_videos_vertically(video_files, output_file):
+def stack_videos_vertically(video_files, output_file):
     # Concatenate videos vertically
     inputs = [ffmpeg.input(video) for video in video_files]
-    ffmpeg.filter(inputs, "vstack").output(
-        output_file,
-    ).run(overwrite_output=True)
+    ffmpeg.filter(inputs, "vstack", inputs=len(inputs)).output(output_file).run(
+        overwrite_output=True
+    )
+
+
+def sort_filenames_by_design_iter(filename):
+    if filename.endswith("last.mp4"):
+        return float("inf")
+    return int(filename.split("_")[-1][:-4])
 
 
 def process_folder(folder_path, temp_folder):
     temp_files = []
-    for f in sorted(os.listdir(folder_path), key=lambda x: int(x.split("_")[-1][:-4])):
+    for f in sorted(os.listdir(folder_path), key=sort_filenames_by_design_iter):
         video_path = os.path.join(folder_path, f)
         temp_file = os.path.join(temp_folder, f"temp_{f}")
-        add_text_to_video(video_path, temp_file, folder_path)
+
+        run_id, design_cycle = f.split("_")
+        design_cycle = design_cycle[:-4]
+        text = f"{run_id} @ design cycle {design_cycle}"
+
+        add_text_to_video(video_path, temp_file, text)
         temp_files.append(temp_file)
 
     return temp_files
 
 
 def create_video_grid(video_dirs, common_name):
-    # Determine amound of rows and cols needed for video grid
-    rows = len(video_dirs)
-    cols = None
+    # Determine amound of n_rows and n_cols needed for video grid
+    n_rows = len(video_dirs)
+    n_cols = None
     for video_folder in video_dirs:
         video_count_in_folder = len(os.listdir(video_folder))
-        if cols is None:
-            cols = video_count_in_folder
-        elif cols != video_count_in_folder:
+        if n_cols is None:
+            n_cols = video_count_in_folder
+        elif n_cols != video_count_in_folder:
             raise ValueError(
                 "Video folders don't all contain the same amount of videos"
             )
 
-    print(f"VIDEO GRID SIZE: {rows}x{cols}")
+    print(f"VIDEO GRID SIZE: {n_rows}x{n_cols}")
 
     temp_folder = "temp_videos"
     os.makedirs(temp_folder, exist_ok=True)
@@ -101,20 +107,18 @@ def create_video_grid(video_dirs, common_name):
         all_temp_files.extend(temp_files)
 
     row_files = []
-    for i in range(rows):
-        col_files = all_temp_files[i * cols : (i + 1) * cols]
+    for i in range(n_rows):
+        col_files = all_temp_files[i * n_cols : (i + 1) * n_cols]
         row_path = os.path.join(temp_folder, f"row_{i}.mp4")
-        concatenate_videos_horizontally(col_files, row_path)
+        stack_videos_horizontally(col_files, row_path)
         row_files.append(row_path)
 
-    # ==============
-
-    concatenate_videos_vertically(row_files, f"{common_name}.mp4")
+    stack_videos_vertically(row_files, f"{common_name}.mp4")
 
     # Clean up temporary files
-    # for temp_file in all_temp_files + row_files:
-    #    os.remove(temp_file)
-    # os.rmdir(temp_folder)
+    for temp_file in all_temp_files + row_files:
+        os.remove(temp_file)
+    os.rmdir(temp_folder)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ import time
 
 import json
 import numpy as np
-import pybullet as p
 
 import rlkit.torch.pytorch_util as ptu
 
@@ -221,10 +220,12 @@ class SimpleVideoRecorder:
         self._env = env
         self._frame_width = 200
         self._frame_height = 200
+        self._save_path_temp = os.path.join(save_dir, f"{file_name}_NOT_H264.mp4")
+        self._save_path = os.path.join(save_dir, f"{file_name}.mp4")
 
         os.makedirs(save_dir, exist_ok=True)
         self._vid_writer = cv2.VideoWriter(
-            os.path.join(save_dir, f"{file_name}.mp4"),
+            self._save_path_temp,
             cv2.VideoWriter_fourcc(*"mp4v"),
             30,
             (self._frame_width, self._frame_height),
@@ -236,6 +237,8 @@ class SimpleVideoRecorder:
         self._vid_writer.write(frame)
 
         # Connect to PyBullet server (for some reason important when recording videos with only a few frames)
+        import pybullet as p
+
         if p.isConnected() == 0:
             p.connect(p.GUI)
 
@@ -250,6 +253,19 @@ class SimpleVideoRecorder:
     def save_video(self):
         self._env.camera_adjust()
         self._vid_writer.release()
+        # Attempt to translate to H.264 encoding (otherwise, playing in web-based GUI fails)
+        try:
+            import ffmpeg
+
+            ffmpeg.input(self._save_path_temp).output(
+                self._save_path,
+                vcodec="libx264",
+                acodec="aac",
+                strict="experimental",
+            ).run()
+            os.remove(self._save_path_temp)
+        except Exception:
+            pass
 
 
 # ========== FILE AND FOLDER HANDLING ==========

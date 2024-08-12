@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     for run_dir in run_dirs:
         if args.common_name is None:
-            common_name = load_config(run_dir)["run_name"]
+            common_name = load_config(run_dir)["run_id"]
 
         for design_cycle in design_cycles:
             command = [
