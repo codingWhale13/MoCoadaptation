@@ -14,7 +14,7 @@ class MixedEvoReplayLocalGlobalStart:
 
     This allows for loading a previous ("old") replay buffer and
     feeding new samples to the new replay buffer. The option `which`
-    is biased to this behaviour, see default options of the methods.
+    is biased to this behavior, see default options of the methods.
     """
 
     def __init__(
