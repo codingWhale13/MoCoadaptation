@@ -112,7 +112,7 @@ This setup was repeated for 3 different settings:
 
 #### Results
 
-Unfortunately, using the experience from the replay buffer seems to have no effect. In the image below, the red crosses show that learning the 0.6-0.4 preference (60% running) of HalfCheetah works reliably from scratch. However, when starting from a different preference (red squares is 30% running, red diamonds is 90% running), we see that steering to the desired new preference of 60% running does not work (no matter if/how the old replay buffer is used):
+Unfortunately, using the experience from the replay buffer seems to have no effect. For all plots, see the [plots folder](plots). In the image below, the red crosses show that learning the 0.6-0.4 preference (60% running) of HalfCheetah works reliably from scratch. However, when starting from a different preference (red squares is 30% running, red diamonds is 90% running), we see that steering to the desired new preference of 60% running does not work (no matter if/how the old replay buffer is used):
 
 -   Steering from 30% running at least increases speed, compared to the very slow movement of the 30% baseline (see blue cross). However, the baseline is not achieved so it seems like loading the previous policy and Q-network actually hinders achieving the desired behavior.
 -   Steering from 90% running does not slow down speed (compared to 90% running baseline, green cross), but interestingly increases energy efficiency. All 90%->60% runs are in a tight cluster, far away from where we want them to be (the red crosses).
@@ -177,9 +177,9 @@ One suggestion for keeping track of multiple runs within one steering experiment
 
 -   my_experiment (CONTAINS ALL EXPERIMENTS RELEVANT FOR ANALYZING STEERING PERFORMANCE)
     -   0.8-0.2 (TARGET PREFERENCE)
-        -   run*direct*{HASH}
-        -   run*direct*{HASH} (same setting as folder above, but with different seed)
-        -   run*steered_from_0.7-0.3*{HASH}
+        -   run_direct_{HASH}
+        -   run_direct_{HASH} (same setting as folder above, but with different seed)
+        -   run_steered_from_0.7-0.3_{HASH}
         -   run_steered_from_1.0-0.0
         -   ...
     -   ...
@@ -192,7 +192,7 @@ where the HASH entries are automatically generated unique run IDs and each folde
 
 ## MO Dashboard
 
-To interact with the experimental results, you can use a web-based GUI created with [Plotly Dash](https://dash.plotly.com). It displays a table with all runs and their rewards per objective. The same data is presented visually as an approximate Pareto front (this only works in 2d). Clicking on one of the table entries shows a video of the policy behavior, the distributions of all action and state dimension and highlights the design parameters that were used in the final design cycle. The GUI looks like this:
+To interact with the experimental results, you can use a web-based GUI created with [Plotly Dash](https://dash.plotly.com). It displays a table with all runs and their rewards per objective. The same data is presented visually as an approximate Pareto front (only implemented for 2d case at the moment). Clicking on one of the table entries shows a video of the policy behavior, the distributions of all action and state dimension and highlights the design parameters that were used in the final design cycle. The GUI looks like this:
 
 ![MO Dashboard](media/mo_dashboard.png)
 
